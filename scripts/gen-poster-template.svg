@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500" width="400" height="500">
+  <defs>
+    <linearGradient id="base__SLUG__" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0%" stop-color="#1a1010"/>
+      <stop offset="45%" stop-color="#0c0808"/>
+      <stop offset="100%" stop-color="#050505"/>
+    </linearGradient>
+    <radialGradient id="glow__SLUG__" cx="50%" cy="34%" r="50%">
+      <stop offset="0%" stop-color="__ACCENT__" stop-opacity="0.5"/>
+      <stop offset="55%" stop-color="__ACCENT__" stop-opacity="0.1"/>
+      <stop offset="100%" stop-color="#050505" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="beam__SLUG__" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.10"/>
+      <stop offset="35%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="fade__SLUG__" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#050505" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#050505" stop-opacity="0.95"/>
+    </linearGradient>
+    <filter id="grain__SLUG__">
+      <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" seed="__SEED__" stitchTiles="stitch" result="noise"/>
+      <feColorMatrix in="noise" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.045 0"/>
+    </filter>
+  </defs>
+
+  <rect width="400" height="500" fill="url(#base__SLUG__)"/>
+  <rect width="400" height="500" fill="url(#glow__SLUG__)"/>
+  <polygon points="-40,500 180,-40 320,-40 40,500" fill="url(#beam__SLUG__)"/>
+
+  <rect x="10" y="10" width="380" height="480" fill="none" stroke="__ACCENT__" stroke-opacity="0.3" stroke-width="1.5"/>
+
+  <g transform="translate(200,205)">
+    <circle r="86" fill="none" stroke="__ACCENT__" stroke-width="3" stroke-opacity="0.85"/>
+    <circle r="86" fill="none" stroke="__ACCENT__" stroke-width="9" stroke-opacity="0.15"/>
+    <circle r="72" fill="#00000055"/>
+    <text x="0" y="__INITIAL_DY__" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="__INITIAL_SIZE__" fill="#FFFFFF" text-anchor="middle" letter-spacing="-2">__INITIALS__</text>
+  </g>
+
+  <g transform="translate(200,325)">
+    <path d="M-34 0 L34 0" stroke="__ACCENT__" stroke-width="4" stroke-linecap="round" transform="rotate(-1)"/>
+  </g>
+
+  <rect y="392" width="400" height="108" fill="url(#fade__SLUG__)"/>
+  <text x="200" y="452" font-family="Arial, sans-serif" font-weight="800" font-size="27" fill="#FFFFFF" text-anchor="middle" letter-spacing="1">__NAME_LINE1__</text>
+  <text x="200" y="480" font-family="Arial, sans-serif" font-weight="800" font-size="27" fill="#FFFFFF" text-anchor="middle" letter-spacing="1">__NAME_LINE2__</text>
+
+  <rect width="400" height="500" filter="url(#grain__SLUG__)" opacity="0.55"/>
+  <rect width="400" height="500" fill="#000000" fill-opacity="0.12"/>
+</svg>

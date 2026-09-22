@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>FanWarsIndia — Your Star. Your Pride. Your War.</title>
+<meta name="description" content="Telugu cinema fandom leaderboard. Support your star. Move the leaderboard." />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          fwblack: "#050505",
+          fwwhite: "#FFFFFF",
+          fwred: "#FF1A1A",
+          fwdeepred: "#B00000",
+        },
+        fontFamily: {
+          display: ["Anton", "Arial Black", "sans-serif"],
+          body: ["Barlow Condensed", "Inter", "sans-serif"],
+        },
+      },
+    },
+  };
+</script>
+
+<link rel="stylesheet" href="css/styles.css?v=5" />
+<link rel="icon" href="assets/logo/crown-mark.png" type="image/png" />
+</head>
+<body class="font-body bg-fwblack text-fwwhite">
+<div class="grain-overlay"></div>
+
+<!-- HEADER -->
+<header class="sticky top-0 z-40 border-b border-white/10 bg-fwblack/90 backdrop-blur">
+  <div class="max-w-5xl mx-auto px-4 h-20 flex items-center justify-between">
+    <a href="#top" class="flex flex-col items-center justify-center gap-0.5 py-2">
+      <img src="assets/logo/crown-mark.png" alt="" class="h-6 w-auto object-contain" />
+      <img src="assets/logo/wordmark-mark.png" alt="FanWarsIndia" class="h-7 w-auto object-contain" />
+    </a>
+    <nav class="flex items-center gap-4 text-sm uppercase tracking-wide text-white/70">
+      <a href="#leaderboard" class="hover:text-fwwhite transition-colors">Leaderboard</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+  <!-- HERO -->
+  <section class="relative px-4 pt-3 sm:pt-4 pb-16 text-center overflow-hidden min-h-[560px] sm:min-h-[700px] flex items-start">
+    <img
+      src="assets/hero/hero-bg.jpg"
+      alt=""
+      class="absolute inset-0 z-0 w-full h-full object-cover object-[center_28%]"
+    />
+    <div class="absolute inset-0 hero-scrim"></div>
+    <div class="hero-glow"></div>
+    <div class="relative z-10 max-w-2xl mx-auto">
+      <div class="flex justify-center mb-8">
+        <img src="assets/logo/fanwarsindia-logo.png" alt="FanWarsIndia — Your Star. Your Pride. Your War." class="w-64 sm:w-72 h-auto drop-shadow-[0_6px_24px_rgba(0,0,0,0.85)]" />
+      </div>
+      <h1 class="font-display uppercase leading-[0.95] text-[13vw] sm:text-6xl hero-text-shadow">
+        How powerful<br />is your <span class="text-fwred brush-underline">fandom?</span>
+      </h1>
+      <p class="mt-6 text-lg sm:text-xl text-white/85 uppercase tracking-wide hero-text-shadow">
+        Support your star. Move the leaderboard.
+      </p>
+      <div class="mt-8 flex justify-center">
+        <a
+          href="#leaderboard"
+          class="fire-btn tap-active inline-flex items-center gap-2.5 font-display uppercase text-lg sm:text-xl px-8 py-4 rounded-sm"
+        >
+          <span class="w-5 h-5">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 2C12 6 8.5 7.8 8.5 11.5C8.5 13.5 9.8 14.5 9.8 14.5C9.8 14.5 8.5 13.8 8.5 12C6.8 13.5 6 15.3 6 17C6 20 8.7 22 12 22C15.3 22 18 20 18 17C18 12.5 14.5 11.8 14.8 8C14.8 8 16 9.5 16 11.5C17 10 17.2 8 16.2 6C15.5 8 14 8.5 14 8.5C15 5.5 13.5 3 12 2Z" fill="currentColor"/>
+            </svg>
+          </span>
+          Support Your Star
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <div class="lg:max-w-5xl lg:mx-auto lg:px-4 lg:grid lg:grid-cols-[2fr_1fr] lg:gap-10 lg:items-start">
+
+    <!-- LEADERBOARD -->
+    <section id="leaderboard" class="px-4 pt-4 pb-10 max-w-2xl mx-auto lg:max-w-none lg:mx-0 lg:px-0 lg:pb-0">
+      <div class="flex items-center gap-2 mb-6">
+        <span class="text-lg leading-none">🇮🇳</span>
+        <h2 class="font-display uppercase text-2xl sm:text-3xl tracking-wide">Telugu Fan Wars</h2>
+      </div>
+
+      <!-- Toggle -->
+      <div class="grid grid-cols-2 gap-2 p-1 rounded-md bg-white/5 border border-white/10 mb-6">
+        <button id="toggle-power" data-mode="power" class="toggle-btn tap-active py-3 rounded-sm font-display uppercase text-sm sm:text-base tracking-wide flex items-center justify-center gap-2">
+          <span class="w-4 h-4 js-icon-flame"></span> Fan Power
+        </button>
+        <button id="toggle-army" data-mode="army" class="toggle-btn tap-active py-3 rounded-sm font-display uppercase text-sm sm:text-base tracking-wide flex items-center justify-center gap-2">
+          <span class="w-4 h-4 js-icon-crowd"></span> Fan Army
+        </button>
+      </div>
+
+      <div id="leaderboard-list" class="flex flex-col gap-3"></div>
+    </section>
+
+    <!-- FAN ACTIVITY -->
+    <section class="px-4 py-10 max-w-2xl mx-auto border-t border-white/10 lg:max-w-none lg:mx-0 lg:px-0 lg:py-4 lg:border-t-0 lg:border-l lg:border-white/10 lg:pl-8 lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto lg:no-scrollbar">
+      <div class="flex items-center gap-2 mb-6">
+        <span class="w-4 h-4 text-fwred js-icon-flame"></span>
+        <h2 class="font-display uppercase text-xl sm:text-2xl tracking-wide">Fan Activity</h2>
+      </div>
+      <div id="activity-list" class="flex flex-col divide-y divide-white/10"></div>
+    </section>
+
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="px-4 py-14 text-center border-t border-white/10">
+    <img src="assets/logo/fanwarsindia-logo.png" alt="FanWarsIndia — Your Star. Your Pride. Your War." class="w-48 sm:w-56 mx-auto" />
+  </footer>
+</main>
+
+<!-- SUPPORT FLOW MODAL ROOT -->
+<div id="modal-root"></div>
+
+<script src="js/icons.js?v=5"></script>
+<script src="js/actors.js?v=5"></script>
+<script src="js/fanLevel.js?v=5"></script>
+<script src="js/store.js?v=5"></script>
+<script src="js/render.js?v=5"></script>
+<script src="js/fan-card.js?v=5"></script>
+<script src="js/support-flow.js?v=5"></script>
+<script src="js/main.js?v=5"></script>
+</body>
+</html>
