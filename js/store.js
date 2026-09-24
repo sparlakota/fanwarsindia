@@ -33,7 +33,7 @@ const Store = (function () {
 
   const state = {
     actors: ACTORS.map((a) => ({ ...a })),
-    contributions: [], // {id, actor_id, supporter_name, amount, created_at}
+    contributions: [], // {id, actor_id, supporter_name, amount, token, created_at}
     activity: SEED_ACTIVITY.map((a, i) => ({
       id: `seed-${i}`,
       name: a.name,
@@ -42,7 +42,7 @@ const Store = (function () {
       created_at: Date.now() - a.minutesAgo * 60 * 1000,
       seed: true,
     })),
-    leaderboardMode: "power", // 'power' | 'army'
+    leaderboardMode: "power", // 'power' | 'army' | 'fans'
   };
 
   // Merge, don't replace: static fields (name/slug/nickname/image) and the
@@ -115,6 +115,56 @@ const Store = (function () {
   }
 
   /**
+   * Individual fans ranked by total contributed across all stars (demo identity =
+   * name; the real backend will key this on verified phone number).
+   * Each entry also carries the star that fan has put the most behind.
+   */
+  function getTopFans(limit) {
+    const byFan = new Map();
+    state.contributions.forEach((c) => {
+      const key = c.supporter_name.trim().toLowerCase();
+      if (!key) return;
+      let fan = byFan.get(key);
+      if (!fan) {
+        fan = { name: c.supporter_name.trim(), total: 0, count: 0, perActor: new Map() };
+        byFan.set(key, fan);
+      }
+      fan.total += c.amount;
+      fan.count += 1;
+      fan.perActor.set(c.actor_id, (fan.perActor.get(c.actor_id) || 0) + c.amount);
+    });
+
+    const fans = [...byFan.values()].map((fan) => {
+      let topActorId = null;
+      let topAmount = -1;
+      fan.perActor.forEach((amount, actorId) => {
+        if (amount > topAmount) {
+          topAmount = amount;
+          topActorId = actorId;
+        }
+      });
+      return {
+        name: fan.name,
+        total: fan.total,
+        count: fan.count,
+        topActor: state.actors.find((a) => a.id === topActorId) || null,
+        starsBacked: fan.perActor.size,
+      };
+    });
+
+    fans.sort((a, b) => b.total - a.total);
+    return limit ? fans.slice(0, limit) : fans;
+  }
+
+  /** Short shareable card serial, e.g. FW-7K2Q9M (no look-alike characters). */
+  function makeCardToken() {
+    const alphabet = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
+    let out = "";
+    for (let i = 0; i < 6; i++) out += alphabet[Math.floor(Math.random() * alphabet.length)];
+    return `FW-${out}`;
+  }
+
+  /**
    * Simulated contribution. In a real backend this is where we'd call
    * POST /api/contributions { actor_id, supporter_name, amount } and a
    * payment provider webhook would confirm before this ever ran.
@@ -132,6 +182,7 @@ const Store = (function () {
       actor_id: actorId,
       supporter_name: cleanName,
       amount: cleanAmount,
+      token: makeCardToken(),
       created_at: Date.now(),
     };
 
@@ -178,9 +229,10 @@ const Store = (function () {
     getLeaderboard,
     getRank,
     getSupporterCumulative,
+    getTopFans,
     addContribution,
     setLeaderboardMode(mode) {
-      state.leaderboardMode = mode === "army" ? "army" : "power";
+      state.leaderboardMode = mode === "army" || mode === "fans" ? mode : "power";
       emit();
     },
   };

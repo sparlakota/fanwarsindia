@@ -64,9 +64,8 @@ function levelBadgeHTML(level, sizePx) {
 }
 
 function renderToggle(mode) {
-  const powerBtn = document.getElementById("toggle-power");
-  const armyBtn = document.getElementById("toggle-army");
-  [powerBtn, armyBtn].forEach((btn) => {
+  ["toggle-power", "toggle-army", "toggle-fans"].forEach((id) => {
+    const btn = document.getElementById(id);
     const active = btn.dataset.mode === mode;
     btn.classList.toggle("bg-fwred", active);
     btn.classList.toggle("text-white", active);
@@ -81,7 +80,10 @@ function rankNumeral(rank) {
 
 function actorCardHTML(actor, rank, mode) {
   const isTop3 = rank <= 3;
-  const metricValue = mode === "army" ? formatCount(actor.fan_army) + " fans" : formatRupees(actor.fan_power);
+  const metricValue =
+    mode === "army"
+      ? `${formatCount(actor.fan_army)} ${actor.fan_army === 1 ? "fan" : "fans"}`
+      : formatRupees(actor.fan_power);
   const secondaryLabel =
     mode === "army"
       ? `${formatRupees(actor.fan_power)} fan power`
@@ -105,8 +107,8 @@ function actorCardHTML(actor, rank, mode) {
           class="shrink-0 rounded-md object-cover border border-white/10 w-16 h-20 sm:w-20 sm:h-24"
         />
         <div class="min-w-0 flex-1">
-          <h3 class="font-display uppercase tracking-wide truncate text-lg sm:text-xl">${actor.name}</h3>
-          <p class="text-fwred/90 text-xs uppercase tracking-[0.12em] truncate">${actor.nickname}</p>
+          <h3 class="font-name font-semibold uppercase tracking-wide truncate text-xl sm:text-2xl leading-tight">${actor.name}</h3>
+          <p class="font-name font-medium text-fwred/90 text-[13px] uppercase tracking-[0.14em] truncate">${actor.nickname}</p>
         </div>
       </div>
 
@@ -141,8 +143,8 @@ function actorCardHTML(actor, rank, mode) {
       />
 
       <div class="min-w-0 flex-1">
-        <h3 class="font-display uppercase tracking-wide truncate text-sm sm:text-base leading-tight">${actor.name}</h3>
-        <p class="text-white/35 text-[10px] uppercase tracking-wide truncate">${actor.nickname}</p>
+        <h3 class="font-name font-semibold uppercase tracking-wide truncate text-base sm:text-lg leading-tight">${actor.name}</h3>
+        <p class="font-name font-medium text-white/50 text-[11px] uppercase tracking-[0.14em] truncate">${actor.nickname}</p>
         <p class="font-display text-fwwhite metric-value text-base sm:text-lg leading-tight truncate">${metricValue}</p>
       </div>
     </div>
@@ -157,11 +159,55 @@ function actorCardHTML(actor, rank, mode) {
   </article>`;
 }
 
+function topFanCardHTML(fan, rank) {
+  const isTop3 = rank <= 3;
+  const level = getFanLevel(fan.total);
+  const star = fan.topActor;
+  const backing = star
+    ? `Backing ${actorTitle(star)}${fan.starsBacked > 1 ? ` +${fan.starsBacked - 1} more` : ""}`
+    : "";
+
+  return `
+  <article
+    class="card-grain relative rounded-lg border ${rankBadgeClasses(rank)} ${rankBackgroundClasses(rank)} ${isTop3 ? "p-4" : "p-3"} flex items-center gap-3 rise-in"
+    style="animation-delay:${Math.min(rank, 10) * 40}ms"
+  >
+    <div class="shrink-0 ${isTop3 ? "w-12" : "w-7"} text-center leading-none">
+      ${rank === 1 ? `<span class="block mb-0.5">${brandCrownHTML(20)}</span>` : ""}
+      <span class="font-display ${isTop3 ? "text-fwred text-3xl" : "text-fwred/80 text-base"}">${rankNumeral(rank)}</span>
+    </div>
+    ${
+      star
+        ? `<img src="${star.image}" alt="${escapeHTML(star.name)}" class="shrink-0 rounded-md object-cover border border-white/10 ${isTop3 ? "w-14 h-[4.5rem]" : "w-11 h-14"}" />`
+        : ""
+    }
+    <div class="min-w-0 flex-1">
+      <h3 class="font-name font-semibold uppercase tracking-wide truncate ${isTop3 ? "text-xl sm:text-2xl" : "text-base sm:text-lg"} leading-tight">${escapeHTML(fan.name)}</h3>
+      <p class="font-name font-medium text-fwred/90 text-[12px] uppercase tracking-[0.12em] leading-snug">${backing}</p>
+      <p class="mt-0.5 text-white/45 text-[11px] flex items-center gap-1.5">${levelBadgeHTML(level, 10)} ${level.label}</p>
+    </div>
+    <div class="shrink-0 text-right">
+      <p class="font-display metric-value ${isTop3 ? "text-2xl sm:text-3xl" : "text-lg"} leading-none">${formatRupees(fan.total)}</p>
+      <p class="text-white/35 text-[10px] mt-1 uppercase tracking-wide">${fan.count} ${fan.count === 1 ? "support" : "supports"}</p>
+    </div>
+  </article>`;
+}
+
 function renderLeaderboard() {
   const list = document.getElementById("leaderboard-list");
   const mode = Store.state.leaderboardMode;
-  const board = Store.getLeaderboard(mode);
-  list.innerHTML = board.map((actor, i) => actorCardHTML(actor, i + 1, mode)).join("");
+  if (mode === "fans") {
+    const fans = Store.getTopFans(20);
+    list.innerHTML = fans.length
+      ? fans.map((fan, i) => topFanCardHTML(fan, i + 1)).join("")
+      : `<div class="rounded-lg border border-white/10 bg-white/[0.03] px-6 py-10 text-center">
+           <p class="font-display uppercase text-xl mb-2">No fans on the board yet</p>
+           <p class="text-white/50 text-sm">Back your star and your name lands here — biggest supporters rise to the top.</p>
+         </div>`;
+  } else {
+    const board = Store.getLeaderboard(mode);
+    list.innerHTML = board.map((actor, i) => actorCardHTML(actor, i + 1, mode)).join("");
+  }
   renderToggle(mode);
 }
 

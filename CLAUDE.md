@@ -22,7 +22,7 @@ There's no `npm start`. Use the PowerShell static file server:
 powershell -File scripts/serve.ps1
 ```
 
-Serves the project root on `http://localhost:8791` (or via the `fanwarsindia-static` launch config in `.claude/launch.json`, which the Browser pane's `preview_start` tool picks up automatically). The server sets `Cache-Control: no-cache, no-store, must-revalidate` on every response — do not remove this, it caused a real multi-turn debugging session before (see decisions.md). All local script/CSS references in `index.html` also carry a `?v=3` cache-busting query string; **bump that version number** if you ever edit a JS/CSS file and need to guarantee a stale-cache-proof reload for the user.
+Serves the project root on `http://localhost:8791` (or via the `fanwarsindia-static` launch config in `.claude/launch.json`, which the Browser pane's `preview_start` tool picks up automatically). The server sets `Cache-Control: no-cache, no-store, must-revalidate` on every response — do not remove this, it caused a real multi-turn debugging session before (see decisions.md). All local script/CSS references in `index.html` also carry a `?v=9` cache-busting query string; **bump that version number** if you ever edit a JS/CSS file and need to guarantee a stale-cache-proof reload for the user.
 
 The server binds to `127.0.0.1` only. It is **not** reachable from other devices (phone, etc.) — that was evaluated and intentionally not set up because the laptop is sometimes on school wifi and opening the port safely would need admin-elevated `netsh` commands the user chose to skip for now. See decisions.md if this comes up again.
 
@@ -39,16 +39,23 @@ js/
   icons.js                 Icons.* — inline SVG UI icon set (no emoji, and NO crown — see below)
   store.js                 Store — all app state, localStorage persistence, contribution logic
   render.js                Leaderboard/activity DOM rendering, rank/level badge helpers
-  fan-card.js               FanCard.html()/download() — the shareable card (on-screen + downloadable PNG)
+  fan-card.js               FanCard.html()/toBlob()/shareBlob()/saveBlob() — the shareable card (on-screen + 1080x1920 PNG)
   support-flow.js           SupportFlow — the amount → name → celebration modal
   main.js                   Bootstraps rendering + wires top-level event listeners
 assets/
   actors/*.jpg              Real licensed actor photos (20), filenames = actor slug
   logo/                    crown-mark.png, wordmark-mark.png, fanwarsindia-logo.png — the REAL brand logo (see decisions.md)
   hero/hero-bg.jpg           Hero background photo (patched + brightened, see decisions.md)
+  og/og-image.jpg            1200x630 link-preview image (built by scripts/make-og-image.ps1)
 scripts/                  One-off PowerShell/bash tools used to build the above assets (kept for reproducibility, not run automatically)
 .claude/launch.json       Browser-pane preview config (runs scripts/serve.ps1)
+vercel.json               Security headers for the live site
+.vercelignore             Keeps .claude/, scripts/ and all *.md (these notes!) OFF the public site — they were publicly readable before it existed
 ```
+
+## Deployment
+
+Live at **https://www.fanwarsindia.com** (apex redirects to www). Vercel project `shab5/fanwarsindia`, auto-deploys every push to `master` of the private GitHub repo `sparlakota/fanwarsindia`. Anything not listed in `.vercelignore` is public — keep internal notes, keys and scripts out of the served tree.
 
 ## Data model (current: in-memory + localStorage; see progress.md for the real-DB target shape)
 
@@ -62,9 +69,11 @@ scripts/                  One-off PowerShell/bash tools used to build the above 
 
 ## Design system quick reference
 
-- **Fonts**: `Anton` (display/headline, all-caps, via `.font-display`) + `Barlow Condensed` (body, via `.font-body`), both Google Fonts.
+- **Fonts** (Google Fonts): `Anton` for hero/headlines/rank numerals/metrics/buttons (`.font-display`); `Oswald` for actor names, nicknames, fan names and small caps labels (`.font-name`, sharper than Anton at small sizes); `Barlow` (regular width) for body text (`.font-body`, the page default). The share-card canvas in `js/fan-card.js` uses the same three fonts and must `document.fonts.load()` them before drawing.
+- **Leaderboard modes**: `Store.state.leaderboardMode` is `power` | `army` | `fans`. `fans` = "Top Fans" (individual supporters ranked by total contributed, via `Store.getTopFans()`, rendered by `topFanCardHTML()`); demo identity is the name string, the real backend will key on phone number.
+- **Share card**: each contribution gets a `token` (`FW-XXXXXX`, `Store.makeCardToken`), printed on the card. `FanCard.toBlob()` renders the 1080x1920 PNG (real actor photo, fan name, token, fanwarsindia.com); `FanCard.shareBlob()` uses the Web Share API with the image attached (falls back to saving the file). The blob is pre-rendered when the success sheet opens so the share sheet can open inside the tap.
 - **Brand colors** (Tailwind config in `index.html`): `fwblack #050505`, `fwwhite #FFFFFF`, `fwred #FF1A1A`, `fwdeepred #B00000`.
-- **No emoji as UI icons.** Use `Icons.*` from `js/icons.js` (flame, crowd, close, back, whatsapp, x, instagram, link, download). The only remaining literal emoji in the codebase is the 🇮🇳 flag next to "Telugu Fan Wars" (contextual, not decorative/icon use) — leave it.
+- **No emoji as UI icons.** Use `Icons.*` from `js/icons.js` (flame, crowd, star, share, close, back, whatsapp, x, instagram, link, download). The India flag next to "Telugu Fan Wars" is an inline SVG, not the 🇮🇳 emoji — Windows has no flag emoji and showed the letters "IN". Don't switch it back.
 - **The crown is always the logo's crown.** Any crown anywhere in the UI (rank #1 badge, Legend badge, header, fan card) must be `assets/logo/crown-mark.png` — use `brandCrownHTML(heightPx)` in `render.js`. There used to be a generic line-art `Icons.crown`; it was deleted because it looked off-brand next to the logo's brush-painted crown. Do not add a crown back to `icons.js`.
 - **Rank display**: top-3 leaderboard cards use `rank-glow-{1,2,3}` CSS classes + a numeral (`01`/`02`/`03`) + the brand crown for #1. Never use medal emoji (🥇🥈🥉) — that was explicitly replaced for looking "gamified app" rather than "movie fandom."
 - **Fan levels**: `FAN_LEVELS` in `js/fanLevel.js` — Supporter (₹1–99) → Fan (₹100–499) → Superfan (₹500–1999) → Die-hard (₹2000–9999) → Legend (₹10000+). Each has a `color`; render via a small colored dot (or the brand crown for Legend) — see `levelBadgeHTML()` in `render.js`. No emoji circles.

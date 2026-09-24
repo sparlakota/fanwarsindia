@@ -52,6 +52,17 @@ const Icons = {
       <path d="M13 17.5L11.8 18.7C10.4 20.1 8.1 20.1 6.7 18.7C5.3 17.3 5.3 15 6.7 13.6L7.9 12.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
     </svg>`,
 
+  star: (cls = "") => `
+    <svg viewBox="0 0 24 24" class="${cls}" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 3L14.6 8.9L21 9.6L16.2 13.9L17.6 20.2L12 17L6.4 20.2L7.8 13.9L3 9.6L9.4 8.9L12 3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+    </svg>`,
+
+  share: (cls = "") => `
+    <svg viewBox="0 0 24 24" class="${cls}" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 15V3M12 3L7.5 7.5M12 3L16.5 7.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M5 12V19C5 20.1 5.9 21 7 21H17C18.1 21 19 20.1 19 19V12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+    </svg>`,
+
   download: (cls = "") => `
     <svg viewBox="0 0 24 24" class="${cls}" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path d="M12 3V15M12 15L7.5 10.5M12 15L16.5 10.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>

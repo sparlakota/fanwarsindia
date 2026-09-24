@@ -5,14 +5,14 @@
 document.addEventListener("DOMContentLoaded", () => {
   document.querySelectorAll(".js-icon-flame").forEach((el) => (el.innerHTML = Icons.flame()));
   document.querySelectorAll(".js-icon-crowd").forEach((el) => (el.innerHTML = Icons.crowd()));
+  document.querySelectorAll(".js-icon-star").forEach((el) => (el.innerHTML = Icons.star()));
 
   renderAll();
 
-  document.getElementById("toggle-power").addEventListener("click", () => {
-    Store.setLeaderboardMode("power");
-  });
-  document.getElementById("toggle-army").addEventListener("click", () => {
-    Store.setLeaderboardMode("army");
+  ["power", "army", "fans"].forEach((mode) => {
+    document.getElementById(`toggle-${mode}`).addEventListener("click", () => {
+      Store.setLeaderboardMode(mode);
+    });
   });
 
   // Event delegation: leaderboard re-renders, so bind on the static container.
@@ -27,4 +27,7 @@ document.addEventListener("DOMContentLoaded", () => {
     renderLeaderboard();
     renderActivity();
   });
+
+  // Keep "just now / 3 mins ago" in the activity feed honest.
+  setInterval(renderActivity, 60000);
 });

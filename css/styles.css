@@ -14,9 +14,15 @@ html {
 body {
   background-color: var(--fw-black);
   color: var(--fw-white);
-  font-family: "Barlow Condensed", "Inter", system-ui, sans-serif;
+  font-family: "Barlow", "Inter", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   position: relative;
+}
+
+/* Actor names, nicknames, fan names — Oswald reads sharper than Anton at small sizes */
+.font-name {
+  font-family: "Oswald", "Anton", sans-serif;
+  letter-spacing: 0.02em;
 }
 
 .font-display {

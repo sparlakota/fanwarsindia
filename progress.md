@@ -49,6 +49,33 @@ Status as of the end of the frontend/design session (2026-09-18). Next session p
 - [x] Schema live: `actors` (seeded, matches `js/actors.js` exactly), `contributions` (empty, `status` pending/success/failed), `public_leaderboard()`/`public_activity()` SECURITY DEFINER functions for safe public reads. RLS on both tables; security advisor run clean (one intentional INFO, two intentional WARNs — see decisions.md for why each is expected, not a gap).
 - [x] **fan_army's definition upgraded**: real contributions will count unique *phone number* per actor, not unique name-string (the frontend-only demo's limitation). See decisions.md.
 
+## Done — live deployment (2026-09-22)
+
+- [x] GitHub repo created: [github.com/sparlakota/fanwarsindia](https://github.com/sparlakota/fanwarsindia) (private — source has the actor photos and business logic; kept off public GitHub browsing even though the deployed site itself is public).
+- [x] Deployed to Vercel: **https://fanwarsindia.vercel.app** — this is the live URL to use for Cashfree's "website" field and any other place a public link is needed. Auto-deploys on every push to `master` from here on (Vercel's GitHub integration), zero-config static hosting (no build step, matches the no-build-tooling constraint).
+- [x] Custom domain **fanwarsindia.com** (bought via Namecheap) connected to the Vercel project: `fanwarsindia.com` → 308 redirect → `www.fanwarsindia.com` (Production). Namecheap's default parking records (CNAME `www`→`parkingpage.namecheap.com`, URL Redirect `@`) were replaced with Vercel's records (A `@`→`216.198.79.1`, CNAME `www`→`44a5a0726e5b07cc.vercel-dns-017.com.`). DNS was propagating as of setup — if `fanwarsindia.com` doesn't resolve yet, give it a few minutes/hours and check `vercel.com/shab5/fanwarsindia/settings/domains` for "Valid Configuration."
+
+## Done — fonts, share card, Top Fans (2026-09-24)
+
+- [x] Typography: names/nicknames/labels now Oswald, body Barlow (regular width, was Barlow Condensed — too cramped at 10-11px), Anton kept for headlines/numerals/buttons.
+- [x] Share artifact rebuilt: PNG now includes the star's photo (the old one was text-only Arial), fan name, unique card token (`FW-XXXXXX`), fanwarsindia.com. "Share Fan Card" opens the native share sheet with the image attached (Instagram/WhatsApp/X on phones); Instagram button saves the card + copies caption; WhatsApp/X buttons share the text + link.
+- [x] Third leaderboard tab "Top Fans": individual supporters ranked by total contributed, showing the star they back most (+N more), fan level, and support count. Same top-3 tint treatment. Has an empty state.
+- [x] Cache-bust `?v=7`. Payments remain deferred (Cashfree KYC in progress).
+- Not yet: no public per-card URL (`/card/FW-XXXXXX`) — needs the backend; link previews on WhatsApp/X show the site, not the individual card.
+
+## Done — full-site bug sweep (2026-09-24)
+
+- [x] **Security**: `decisions.md`, `progress.md`, `CLAUDE.md`, `scripts/`, `.claude/` were publicly readable on fanwarsindia.com (Vercel serves everything). Added `.vercelignore`. Added `vercel.json` security headers (nosniff, no framing, referrer policy, permissions policy).
+- [x] Link previews: Open Graph + Twitter card tags and a 1200x630 `assets/og/og-image.jpg`, so shared links show an image instead of a bare URL.
+- [x] Flag emoji rendered as "IN" on Windows → inline SVG flag.
+- [x] "1 fans" → "1 fan".
+- [x] Custom amount: 0.4 used to pass validation and show ₹0 (stored as ₹1); now whole rupees ₹1–₹1,00,000 with an inline hint. Enter submits.
+- [x] Name field now actually gets focus (`autofocus` doesn't work on injected HTML). Back from the name step keeps the chosen amount and typed name.
+- [x] Escape closes the support sheet; close buttons have `aria-label`.
+- [x] Toasts were off-centre (pop-in's transform overrode the translate) → centred with auto margins. Copy toasts no longer claim success when the clipboard write fails.
+- [x] Activity "x mins ago" refreshes every minute. `#leaderboard` no longer hides under the sticky header when jumped to.
+- [x] Share card: long star titles shrink to fit two lines; more space above the amount.
+
 ## Outstanding — rest of the payments build
 
 1. **Cashfree Edge Functions** (not started): a `create-order` function (calls Cashfree Orders API, needs the user's sandbox keys) and a `cashfree-webhook` function (HMAC-SHA256 signature verification per Cashfree's docs, flips `contributions.status` to `success`, which is what actually credits fan_power/fan_army — never trust the browser redirect alone).

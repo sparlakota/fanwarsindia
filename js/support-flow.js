@@ -6,6 +6,21 @@
 
 const SupportFlow = (function () {
   const AMOUNT_OPTIONS = [49, 99, 199, 499, 999];
+  const MIN_AMOUNT = 1;
+  const MAX_AMOUNT = 100000;
+
+  function cleanAmount(value) {
+    const n = Math.round(Number(value));
+    return Number.isFinite(n) && n >= MIN_AMOUNT && n <= MAX_AMOUNT ? n : null;
+  }
+
+  function closeBtnHTML() {
+    return `<button id="modal-close" aria-label="Close" class="icon-btn text-white/50 hover:text-white w-9 h-9 -mr-2 flex items-center justify-center"><span class="w-4 h-4">${Icons.close()}</span></button>`;
+  }
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && flow.open) close();
+  });
 
   let flow = {
     open: false,
@@ -71,14 +86,14 @@ const SupportFlow = (function () {
       <div class="p-5 pb-8">
         <div class="flex items-center justify-between mb-5">
           <span class="text-xs uppercase tracking-[0.2em] text-white/40">Support</span>
-          <button id="modal-close" class="icon-btn text-white/50 hover:text-white w-9 h-9 -mr-2 flex items-center justify-center"><span class="w-4 h-4">${Icons.close()}</span></button>
+          ${closeBtnHTML()}
         </div>
 
         <div class="flex items-center gap-3 mb-6">
           <img src="${a.image}" alt="${a.name}" class="w-14 h-16 rounded-md object-cover border border-white/10" />
           <div>
-            <h3 class="font-display uppercase text-xl leading-none">${a.name}</h3>
-            <p class="text-fwred/90 text-xs uppercase tracking-wide mt-1">${a.nickname}</p>
+            <h3 class="font-name font-semibold uppercase text-2xl leading-none">${a.name}</h3>
+            <p class="font-name font-medium text-fwred/90 text-[13px] uppercase tracking-[0.14em] mt-1">${a.nickname}</p>
           </div>
         </div>
 
@@ -103,11 +118,14 @@ const SupportFlow = (function () {
           <input
             id="custom-amount-input"
             type="number"
-            min="1"
+            min="${MIN_AMOUNT}"
+            max="${MAX_AMOUNT}"
+            step="1"
             inputmode="numeric"
             placeholder="e.g. 250"
             class="w-full bg-white/5 border border-white/15 rounded-md px-4 py-3 text-lg font-display focus:outline-none focus:border-fwred"
           />
+          <p id="custom-amount-hint" class="text-[11px] text-white/35 mt-1">Between ${formatRupees(MIN_AMOUNT)} and ${formatRupees(MAX_AMOUNT)}</p>
         </div>
 
         <button id="amount-continue" disabled
@@ -126,7 +144,7 @@ const SupportFlow = (function () {
           <button id="modal-back" class="icon-btn text-white/50 hover:text-white flex items-center gap-1.5 text-sm uppercase tracking-wide -ml-2 px-2 py-2">
             <span class="w-3.5 h-3.5 inline-block">${Icons.back()}</span> Back
           </button>
-          <button id="modal-close" class="icon-btn text-white/50 hover:text-white w-9 h-9 -mr-2 flex items-center justify-center"><span class="w-4 h-4">${Icons.close()}</span></button>
+          ${closeBtnHTML()}
         </div>
 
         <p class="text-white/50 text-xs uppercase tracking-wide mb-1">Backing ${actorTitle(a)} with</p>
@@ -138,8 +156,8 @@ const SupportFlow = (function () {
           type="text"
           maxlength="40"
           placeholder="Enter your name"
+          value="${escapeHTML(flow.supporterName)}"
           class="w-full bg-white/5 border border-white/15 rounded-md px-4 py-4 text-lg font-body focus:outline-none focus:border-fwred mb-2"
-          autofocus
         />
         <p class="text-[11px] text-white/30 mb-6 uppercase tracking-wide">Shown on your Fan Card and the activity wall</p>
 
@@ -159,7 +177,7 @@ const SupportFlow = (function () {
     return shell(`
       <div class="p-5 pb-8 text-center">
         <div class="flex justify-end mb-1">
-          <button id="modal-close" class="icon-btn text-white/50 hover:text-white w-9 h-9 -mr-2 flex items-center justify-center"><span class="w-4 h-4">${Icons.close()}</span></button>
+          ${closeBtnHTML()}
         </div>
 
         <div class="pop-in">
@@ -194,7 +212,11 @@ const SupportFlow = (function () {
           <div id="fan-card-mount"></div>
         </div>
 
-        <div class="grid grid-cols-4 gap-2 mt-5">
+        <button id="share-native" class="fire-btn tap-active w-full rounded-md py-4 mt-5 font-display uppercase text-lg flex items-center justify-center gap-2">
+          <span class="w-5 h-5">${Icons.share()}</span> Share Fan Card
+        </button>
+
+        <div class="grid grid-cols-4 gap-2 mt-3">
           <button id="share-whatsapp" class="chip-outline tap-active rounded-md py-3 flex flex-col items-center gap-1.5">
             <span class="w-5 h-5">${Icons.whatsapp()}</span><span class="text-[10px] uppercase">WhatsApp</span>
           </button>
@@ -249,11 +271,20 @@ const SupportFlow = (function () {
     const customInput = document.getElementById("custom-amount-input");
 
     function enableContinue(amount) {
-      const valid = Number(amount) > 0;
+      const valid = cleanAmount(amount) !== null;
       continueBtn.disabled = !valid;
       continueBtn.classList.toggle("opacity-40", !valid);
       continueBtn.classList.toggle("pointer-events-none", !valid);
     }
+
+    // Coming back from the name step: restore the previous choice instead of a blank form.
+    if (flow.customMode) {
+      customBtn.classList.add("active");
+      if (flow.amount) customInput.value = flow.amount;
+    } else if (flow.amount) {
+      amountBtns.forEach((b) => b.classList.toggle("active", Number(b.dataset.amount) === flow.amount));
+    }
+    enableContinue(flow.amount);
 
     amountBtns.forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -269,23 +300,29 @@ const SupportFlow = (function () {
 
     customBtn.addEventListener("click", () => {
       flow.customMode = true;
-      flow.amount = null;
+      flow.amount = cleanAmount(customInput.value);
       amountBtns.forEach((b) => b.classList.remove("active"));
       customBtn.classList.add("active");
       customWrap.classList.remove("hidden");
       customInput.focus();
-      enableContinue(null);
+      enableContinue(flow.amount);
     });
 
-    if (customInput) {
-      customInput.addEventListener("input", () => {
-        flow.amount = Number(customInput.value);
-        enableContinue(flow.amount);
-      });
-    }
+    const hint = document.getElementById("custom-amount-hint");
+    customInput.addEventListener("input", () => {
+      flow.amount = cleanAmount(customInput.value);
+      const bad = customInput.value !== "" && flow.amount === null;
+      hint.classList.toggle("text-fwred", bad);
+      hint.classList.toggle("text-white/35", !bad);
+      enableContinue(flow.amount);
+    });
+    customInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && flow.amount) goToName(flow.amount);
+    });
 
     continueBtn.addEventListener("click", () => {
-      if (Number(flow.amount) > 0) goToName(Math.round(Number(flow.amount)));
+      const amount = cleanAmount(flow.amount);
+      if (amount) goToName(amount);
     });
   }
 
@@ -295,6 +332,7 @@ const SupportFlow = (function () {
     const submitBtn = document.getElementById("name-submit");
 
     backBtn.addEventListener("click", () => {
+      flow.supporterName = input.value;
       flow.step = "amount";
       render();
     });
@@ -307,6 +345,8 @@ const SupportFlow = (function () {
     }
 
     input.addEventListener("input", toggleSubmit);
+    toggleSubmit();
+    input.focus();
     input.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && input.value.trim()) submit(input.value.trim());
     });
@@ -318,18 +358,36 @@ const SupportFlow = (function () {
   function wireSuccessStep() {
     const { actor, result } = flow;
     const level = result.level;
-    const mount = document.getElementById("fan-card-mount");
-    mount.innerHTML = FanCard.html({
+    const token = result.contribution.token;
+    const cardData = {
+      actorTitle: actorTitle(actor),
       actorName: actor.name,
       actorImage: actor.image,
       amount: flow.amount,
-      cumulative: result.cumulative,
       level,
       rank: result.newRank,
-    });
+      supporterName: flow.supporterName,
+      token,
+    };
+    const filename = `fanwarsindia-${actor.slug}-${token}.png`;
+
+    const mount = document.getElementById("fan-card-mount");
+    mount.innerHTML = FanCard.html(cardData);
+
+    // Render the PNG up front so the share sheet opens instantly inside the tap (browsers require that).
+    const blobPromise = FanCard.toBlob(cardData);
+    blobPromise.catch(() => {});
 
     const shareText = buildShareText(actor, flow.amount, level, result.newRank);
 
+    document.getElementById("share-native").addEventListener("click", async () => {
+      try {
+        const outcome = await FanCard.shareBlob(await blobPromise, filename, shareText);
+        if (outcome === "saved") toast("Card saved — post it from your gallery");
+      } catch (e) {
+        toast("Couldn't build the card — try Download");
+      }
+    });
     document.getElementById("share-whatsapp").addEventListener("click", () => {
       window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, "_blank", "noopener");
     });
@@ -337,42 +395,47 @@ const SupportFlow = (function () {
       window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`, "_blank", "noopener");
     });
     document.getElementById("share-instagram").addEventListener("click", async () => {
-      await copyToClipboard(shareText);
-      toast("Caption copied — paste it into your Instagram story");
+      // Copy first, while the tap still counts as a user gesture (Safari drops it after an await).
+      const copied = await copyToClipboard(shareText);
+      try {
+        FanCard.saveBlob(await blobPromise, filename);
+        toast(copied ? "Card saved + caption copied — add it to your story" : "Card saved — add it to your story");
+      } catch (e) {
+        toast("Couldn't build the card — try Download");
+      }
     });
     document.getElementById("share-copy").addEventListener("click", async () => {
-      await copyToClipboard(shareText);
-      toast("Copied to clipboard");
+      toast((await copyToClipboard(shareText)) ? "Copied to clipboard" : "Couldn't copy — select and copy manually");
     });
-    document.getElementById("download-card").addEventListener("click", () => {
-      FanCard.download({
-        actorName: actor.name,
-        amount: flow.amount,
-        cumulative: result.cumulative,
-        level,
-        rank: result.newRank,
-      });
+    document.getElementById("download-card").addEventListener("click", async () => {
+      try {
+        FanCard.saveBlob(await blobPromise, filename);
+      } catch (e) {
+        toast("Couldn't build the card — please retry");
+      }
     });
     document.getElementById("done-btn").addEventListener("click", close);
   }
 
   function buildShareText(actor, amount, level, rank) {
     const rankText = rank ? ` and they're #${rank} on FanWarsIndia` : "";
-    return `I just backed ${actor.name} with ${formatRupees(amount)} Fan Power on FanWarsIndia${rankText}. ${level.label} tier. How powerful is your fandom? #FanWarsIndia`;
+    return `I just backed ${actorTitle(actor)} with ${formatRupees(amount)} Fan Power on FanWarsIndia${rankText}. ${level.label} tier. How powerful is your fandom? https://fanwarsindia.com #FanWarsIndia`;
   }
 
   async function copyToClipboard(text) {
     try {
       await navigator.clipboard.writeText(text);
+      return true;
     } catch (e) {
-      /* clipboard unavailable — silently ignore */
+      return false;
     }
   }
 
   function toast(message) {
     const el = document.createElement("div");
+    // Centred with mx-auto, not translate: pop-in's transform would override a translate.
     el.className =
-      "fixed bottom-6 left-1/2 -translate-x-1/2 z-[70] bg-fwwhite text-fwblack text-sm font-semibold px-4 py-2.5 rounded-full shadow-lg pop-in";
+      "fixed bottom-6 inset-x-4 mx-auto w-fit max-w-full text-center z-[70] bg-fwwhite text-fwblack text-sm font-semibold px-4 py-2.5 rounded-full shadow-lg pop-in";
     el.textContent = message;
     document.body.appendChild(el);
     setTimeout(() => el.remove(), 2200);

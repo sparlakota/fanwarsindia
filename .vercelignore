@@ -1,0 +1,7 @@
+# Internal files — never serve these on fanwarsindia.com
+.claude/
+scripts/
+CLAUDE.md
+progress.md
+decisions.md
+*.md

@@ -5,10 +5,26 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>FanWarsIndia — Your Star. Your Pride. Your War.</title>
 <meta name="description" content="Telugu cinema fandom leaderboard. Support your star. Move the leaderboard." />
+<meta name="theme-color" content="#050505" />
+<link rel="canonical" href="https://www.fanwarsindia.com/" />
+
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="FanWarsIndia" />
+<meta property="og:url" content="https://www.fanwarsindia.com/" />
+<meta property="og:title" content="FanWarsIndia — How powerful is your fandom?" />
+<meta property="og:description" content="Support your star. Move the leaderboard. Your Star. Your Pride. Your War." />
+<meta property="og:image" content="https://www.fanwarsindia.com/assets/og/og-image.jpg" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="FanWarsIndia logo over a crowd of Telugu cinema fans" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="FanWarsIndia — How powerful is your fandom?" />
+<meta name="twitter:description" content="Support your star. Move the leaderboard." />
+<meta name="twitter:image" content="https://www.fanwarsindia.com/assets/og/og-image.jpg" />
 
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet" />
 
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
@@ -23,14 +39,15 @@
         },
         fontFamily: {
           display: ["Anton", "Arial Black", "sans-serif"],
-          body: ["Barlow Condensed", "Inter", "sans-serif"],
+          name: ["Oswald", "Anton", "sans-serif"],
+          body: ["Barlow", "Inter", "sans-serif"],
         },
       },
     },
   };
 </script>
 
-<link rel="stylesheet" href="css/styles.css?v=5" />
+<link rel="stylesheet" href="css/styles.css?v=9" />
 <link rel="icon" href="assets/logo/crown-mark.png" type="image/png" />
 </head>
 <body class="font-body bg-fwblack text-fwwhite">
@@ -88,19 +105,29 @@
   <div class="lg:max-w-5xl lg:mx-auto lg:px-4 lg:grid lg:grid-cols-[2fr_1fr] lg:gap-10 lg:items-start">
 
     <!-- LEADERBOARD -->
-    <section id="leaderboard" class="px-4 pt-4 pb-10 max-w-2xl mx-auto lg:max-w-none lg:mx-0 lg:px-0 lg:pb-0">
-      <div class="flex items-center gap-2 mb-6">
-        <span class="text-lg leading-none">🇮🇳</span>
+    <section id="leaderboard" class="scroll-mt-24 px-4 pt-4 pb-10 max-w-2xl mx-auto lg:max-w-none lg:mx-0 lg:px-0 lg:pb-0">
+      <div class="flex items-center gap-2.5 mb-6">
+        <!-- SVG, not the 🇮🇳 emoji: Windows has no flag emoji and renders it as the letters "IN" -->
+        <svg viewBox="0 0 30 20" class="w-7 h-auto shrink-0 rounded-[2px]" role="img" aria-label="India">
+          <rect width="30" height="20" fill="#FF9933"/>
+          <rect y="6.667" width="30" height="6.667" fill="#FFFFFF"/>
+          <rect y="13.333" width="30" height="6.667" fill="#138808"/>
+          <circle cx="15" cy="10" r="2.6" fill="none" stroke="#000080" stroke-width="0.5"/>
+          <circle cx="15" cy="10" r="0.5" fill="#000080"/>
+        </svg>
         <h2 class="font-display uppercase text-2xl sm:text-3xl tracking-wide">Telugu Fan Wars</h2>
       </div>
 
       <!-- Toggle -->
-      <div class="grid grid-cols-2 gap-2 p-1 rounded-md bg-white/5 border border-white/10 mb-6">
-        <button id="toggle-power" data-mode="power" class="toggle-btn tap-active py-3 rounded-sm font-display uppercase text-sm sm:text-base tracking-wide flex items-center justify-center gap-2">
-          <span class="w-4 h-4 js-icon-flame"></span> Fan Power
+      <div class="grid grid-cols-3 gap-1.5 p-1 rounded-md bg-white/5 border border-white/10 mb-6">
+        <button id="toggle-power" data-mode="power" class="toggle-btn tap-active py-3 rounded-sm font-display uppercase text-xs sm:text-base tracking-wide flex items-center justify-center gap-1.5 sm:gap-2">
+          <span class="w-4 h-4 shrink-0 js-icon-flame"></span> Fan Power
         </button>
-        <button id="toggle-army" data-mode="army" class="toggle-btn tap-active py-3 rounded-sm font-display uppercase text-sm sm:text-base tracking-wide flex items-center justify-center gap-2">
-          <span class="w-4 h-4 js-icon-crowd"></span> Fan Army
+        <button id="toggle-army" data-mode="army" class="toggle-btn tap-active py-3 rounded-sm font-display uppercase text-xs sm:text-base tracking-wide flex items-center justify-center gap-1.5 sm:gap-2">
+          <span class="w-4 h-4 shrink-0 js-icon-crowd"></span> Fan Army
+        </button>
+        <button id="toggle-fans" data-mode="fans" class="toggle-btn tap-active py-3 rounded-sm font-display uppercase text-xs sm:text-base tracking-wide flex items-center justify-center gap-1.5 sm:gap-2">
+          <span class="w-4 h-4 shrink-0 js-icon-star"></span> Top Fans
         </button>
       </div>
 
@@ -127,13 +154,13 @@
 <!-- SUPPORT FLOW MODAL ROOT -->
 <div id="modal-root"></div>
 
-<script src="js/icons.js?v=5"></script>
-<script src="js/actors.js?v=5"></script>
-<script src="js/fanLevel.js?v=5"></script>
-<script src="js/store.js?v=5"></script>
-<script src="js/render.js?v=5"></script>
-<script src="js/fan-card.js?v=5"></script>
-<script src="js/support-flow.js?v=5"></script>
-<script src="js/main.js?v=5"></script>
+<script src="js/icons.js?v=9"></script>
+<script src="js/actors.js?v=9"></script>
+<script src="js/fanLevel.js?v=9"></script>
+<script src="js/store.js?v=9"></script>
+<script src="js/render.js?v=9"></script>
+<script src="js/fan-card.js?v=9"></script>
+<script src="js/support-flow.js?v=9"></script>
+<script src="js/main.js?v=9"></script>
 </body>
 </html>
