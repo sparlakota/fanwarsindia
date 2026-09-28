@@ -28,6 +28,7 @@ export function corsHeaders(req: Request): Record<string, string> {
     "Access-Control-Allow-Origin": isAllowedOrigin(origin) ? origin : SITE_ORIGIN,
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info",
+    "Access-Control-Max-Age": "7200", // browsers skip the preflight round trip for 2 h
     Vary: "Origin",
   };
 }

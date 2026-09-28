@@ -20,6 +20,7 @@ const SupportFlow = (function () {
     too_many_attempts: "Too many attempts from this number. Try again in a few minutes.",
     network: "Couldn't reach the server. Check your connection and try again.",
     checkout_load: "Couldn't open the payment window. Check your connection and try again.",
+    gateway_error: "Our payment partner didn't respond in time. Nothing was charged — please try again.",
   };
   const DEFAULT_ERROR = "Something went wrong starting the payment. Please try again.";
 
@@ -70,6 +71,7 @@ const SupportFlow = (function () {
     flow = { ...blankFlow(), open: true, actor };
     document.body.style.overflow = "hidden";
     render();
+    prepareForPayment();
   }
 
   /** Re-enter after a Cashfree redirect back to /?order_id=... */
@@ -94,7 +96,7 @@ const SupportFlow = (function () {
   // ---------- payment ----------
 
   let cashfreeScript = null;
-  function loadCashfree(mode) {
+  function loadCashfreeScript() {
     if (!cashfreeScript) {
       cashfreeScript = new Promise((resolve, reject) => {
         const s = document.createElement("script");
@@ -107,12 +109,29 @@ const SupportFlow = (function () {
         document.head.appendChild(s);
       });
     }
-    return cashfreeScript.then(() => window.Cashfree({ mode }));
+    return cashfreeScript;
+  }
+  function loadCashfree(mode) {
+    return loadCashfreeScript().then(() => window.Cashfree({ mode }));
+  }
+
+  /** Called when the sheet opens: fetch Cashfree's checkout code and wake our server in the background. */
+  function prepareForPayment() {
+    loadCashfreeScript().catch(() => {});
+    Store.warmPaymentServer();
   }
 
   async function startPayment() {
     flow.error = null;
+    flow.slow = false;
     goTo("paying");
+    // If the payment partner is slow, say so instead of leaving a silent spinner.
+    const slowTimer = setTimeout(() => {
+      if (flow.open && flow.step === "paying") {
+        flow.slow = true;
+        render();
+      }
+    }, 5000);
 
     let order;
     try {
@@ -123,10 +142,12 @@ const SupportFlow = (function () {
         phone: flow.phone,
       });
     } catch (e) {
+      clearTimeout(slowTimer);
       flow.error = ERROR_MESSAGES[e.code] || DEFAULT_ERROR;
       goTo("details");
       return;
     }
+    clearTimeout(slowTimer);
     flow.orderId = order.order_id;
 
     let result;
@@ -421,7 +442,13 @@ const SupportFlow = (function () {
     const views = {
       amount: amountStepHTML,
       details: detailsStepHTML,
-      paying: () => busyStepHTML("Opening secure checkout", "Hold tight — don't close this page."),
+      paying: () =>
+        busyStepHTML(
+          "Opening secure checkout",
+          flow.slow
+            ? "Our payment partner is taking a little longer than usual — still working, don't close this page."
+            : "Hold tight — don't close this page."
+        ),
       verifying: () => busyStepHTML("Confirming your payment", "Checking with the bank. This takes a few seconds."),
       failed: failedStepHTML,
       processing: processingStepHTML,

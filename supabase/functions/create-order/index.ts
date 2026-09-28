@@ -66,28 +66,31 @@ Deno.serve(async (req) => {
   if (!phone) return json(req, { error: "invalid_phone" }, 400);
 
   const supabase = db();
-
-  const { data: actor } = await supabase.from("actors").select("id, name").eq("id", actorId).maybeSingle();
-  if (!actor) return json(req, { error: "invalid_actor" }, 400);
-
   const since = new Date(Date.now() - 10 * 60 * 1000).toISOString();
-  const { count } = await supabase
-    .from("contributions")
-    .select("id", { count: "exact", head: true })
-    .eq("supporter_phone", phone)
-    .eq("status", "pending")
-    .gte("created_at", since);
-  if ((count ?? 0) >= MAX_PENDING_PER_PHONE) return json(req, { error: "too_many_attempts" }, 429);
-
   const clientIpHash = await ipHash(req);
-  if (clientIpHash) {
-    const { count: ipCount } = await supabase
+
+  // Independent checks run in parallel — each one is a round trip to the database.
+  const [{ data: actor }, { count: phoneCount }, ipCount] = await Promise.all([
+    supabase.from("actors").select("id, name").eq("id", actorId).maybeSingle(),
+    supabase
       .from("contributions")
       .select("id", { count: "exact", head: true })
-      .eq("client_ip_hash", clientIpHash)
-      .neq("status", "success")
-      .gte("created_at", since);
-    if ((ipCount ?? 0) >= MAX_UNPAID_PER_IP) return json(req, { error: "too_many_attempts" }, 429);
+      .eq("supporter_phone", phone)
+      .eq("status", "pending")
+      .gte("created_at", since),
+    clientIpHash
+      ? supabase
+          .from("contributions")
+          .select("id", { count: "exact", head: true })
+          .eq("client_ip_hash", clientIpHash)
+          .neq("status", "success")
+          .gte("created_at", since)
+          .then((r) => r.count ?? 0)
+      : Promise.resolve(0),
+  ]);
+  if (!actor) return json(req, { error: "invalid_actor" }, 400);
+  if ((phoneCount ?? 0) >= MAX_PENDING_PER_PHONE || ipCount >= MAX_UNPAID_PER_IP) {
+    return json(req, { error: "too_many_attempts" }, 429);
   }
 
   const orderId = `fw_${Date.now().toString(36)}_${randomToken(8, "abcdefghijklmnopqrstuvwxyz0123456789")}`;

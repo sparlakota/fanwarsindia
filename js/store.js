@@ -136,6 +136,20 @@ const Store = (function () {
     return body;
   }
 
+  /**
+   * Wake the payment functions while the fan is still choosing an amount / typing, so the
+   * server's cold-start (2–3 s after a quiet spell) doesn't land on the Pay tap. Both calls
+   * are rejected instantly by design (wrong method / dummy id) — booting is the point.
+   */
+  let lastWarm = 0;
+  function warmPaymentServer() {
+    if (Date.now() - lastWarm < 60000) return;
+    lastWarm = Date.now();
+    const quiet = () => {};
+    fetch(`${FW_CONFIG.supabaseUrl}/functions/v1/create-order`, { method: "GET", headers: baseHeaders }).catch(quiet);
+    fetch(`${FW_CONFIG.supabaseUrl}/functions/v1/order-status?order_id=warmup`, { headers: baseHeaders }).catch(quiet);
+  }
+
   /** -> { order_id, payment_session_id, environment } */
   function createOrder({ actorId, amount, name, phone }) {
     return callFunction("create-order", {
@@ -161,6 +175,7 @@ const Store = (function () {
     getTopFans,
     createOrder,
     getOrderStatus,
+    warmPaymentServer,
     setLeaderboardMode(mode) {
       state.leaderboardMode = mode === "army" || mode === "fans" ? mode : "power";
       emit();
