@@ -235,6 +235,52 @@ svg[viewBox="0 0 24 24"] {
   overflow: hidden;
 }
 
+/* Legal pages (terms / privacy / refund / contact) */
+.legal h2 {
+  font-family: "Oswald", "Anton", sans-serif;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-size: 1.15rem;
+  color: var(--fw-white);
+  margin: 2.25rem 0 0.75rem;
+}
+.legal p,
+.legal li {
+  color: rgba(255, 255, 255, 0.78);
+  line-height: 1.7;
+  font-size: 0.975rem;
+}
+.legal p + p {
+  margin-top: 0.85rem;
+}
+.legal ul {
+  list-style: disc;
+  padding-left: 1.25rem;
+  margin: 0.6rem 0;
+}
+.legal li + li {
+  margin-top: 0.35rem;
+}
+.legal a {
+  color: var(--fw-red);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.legal strong {
+  color: var(--fw-white);
+  font-weight: 600;
+}
+
+/* Details the owner must fill in before launch — deliberately impossible to miss. */
+.fill-me {
+  background: #ffe34d;
+  color: #050505;
+  padding: 0 0.3em;
+  border-radius: 3px;
+  font-weight: 700;
+}
+
 .text-outline {
   -webkit-text-stroke: 1px rgba(255, 255, 255, 0.5);
 }
