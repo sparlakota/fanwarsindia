@@ -52,6 +52,8 @@ supabase/functions/       Edge Function source (deployed via the Supabase connec
   create-order/             POST: validate, insert pending contribution, create Cashfree order
   order-status/             GET: syncs with Cashfree if pending, returns celebration data
   cashfree-webhook/         POST from Cashfree: verifies signature, then syncOrder()
+  reconcile-pending/        POST from pg_cron every 10 min: re-checks stuck pending orders with Cashfree
+GO-LIVE.md                Step-by-step checklist for the day live Cashfree keys arrive
 assets/
   actors/*.jpg              Real licensed actor photos (20), filenames = actor slug
   logo/                    crown-mark.png, wordmark-mark.png, fanwarsindia-logo.png — the REAL brand logo (see decisions.md)
@@ -82,6 +84,8 @@ Supabase project `fanwarsindia` (id `cntrkcpwetjjifubccha`, ap-south-1), managed
 **Moderation (hide an abusive name)**: `contributions.name_hidden`. Hidden names show publicly as "A fan" in Fan Activity and Top Fans; the money still counts. The owner hides a name either by ticking `name_hidden` in Supabase → Table Editor → contributions, or in the SQL editor: `select admin_hide_fan_name('FW-XXXXXX');` (one contribution) / `select admin_hide_fan_name('FW-XXXXXX', true);` (every contribution from that fan's phone) / add `, false` as a third argument to un-hide. `admin_hide_fan_name` is revoked from anon/authenticated — owner-only.
 
 **Test branch / previews**: payment work is developed on the `payments` branch. Vercel builds every non-`master` push as a preview (`fanwarsindia-git-payments-shab5.vercel.app`) using the same Supabase backend + sandbox keys; Edge Function CORS accepts `https://fanwarsindia(-…)?-shab5.vercel.app` (this Vercel team only). `master` = what fanwarsindia.com serves — merge `payments` into it only at go-live.
+
+**Safety net (`reconcile-pending`)**: pg_cron job `reconcile-pending-payments` runs every 10 min and POSTs (via pg_net) to the `reconcile-pending` Edge Function with header `x-reconcile-token` = Vault secret `reconcile_token`; the function checks it with `reconcile_token_ok()` (service_role only) and runs `syncOrder()` on pending orders 2 min–48 h old. Orders are created with a 1 h `order_expiry_time`, so abandoned checkouts become EXPIRED → `failed`. Verified 2026-09-28 by forcing a paid order back to pending: the job recovered it. **Go-live steps: see `GO-LIVE.md`.**
 
 **Abuse limits in `create-order`**: max 5 pending orders per phone and 30 unpaid orders per hashed IP, per 10 minutes (IP limit is generous on purpose — Indian carriers share IPs via CGNAT). Cashfree gets a plain-ASCII copy of the fan's name (or none) because emoji/other scripts can fail order creation; the real name is stored for display.
 

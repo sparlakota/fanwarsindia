@@ -27,6 +27,13 @@ function normalizePhone(raw: unknown): string | null {
   return /^[6-9]\d{9}$/.test(digits) ? digits : null;
 }
 
+const ORDER_TTL_MINUTES = 60; // unpaid checkouts expire at Cashfree; reconcile-pending then marks them failed
+
+/** ISO 8601 in IST, the format Cashfree documents for order_expiry_time. */
+function istIso(ms: number): string {
+  return new Date(ms + 330 * 60_000).toISOString().slice(0, 19) + "+05:30";
+}
+
 function randomToken(len: number, alphabet: string): string {
   const bytes = crypto.getRandomValues(new Uint8Array(len));
   return Array.from(bytes, (b) => alphabet[b % alphabet.length]).join("");
@@ -122,6 +129,7 @@ Deno.serve(async (req) => {
         notify_url: `${Deno.env.get("SUPABASE_URL")}/functions/v1/cashfree-webhook`,
       },
       order_note: `Fan Power for ${actor.name}`,
+      order_expiry_time: istIso(Date.now() + ORDER_TTL_MINUTES * 60_000),
     }),
   });
 

@@ -104,6 +104,9 @@ Open (not code): Cashfree checkout brand name ("Business Name"); no moderation f
 - All payment work committed to branch `payments` and pushed → Vercel preview for phone testing; Edge Function CORS/return URL accept this team's preview origins. The preview is behind Vercel Authentication (strangers get a Vercel sign-in), so sandbox payments can't be made by the public there.
 - Re-test on the preview (sandbox): ₹99 card payment for Jr NTR → webhook twice (200) → paid with cf_payment_id → celebration screen ("climbed from #5 to #1") → leaderboard/Top Fans/activity updated. Hide switch verified: "A fan" publicly while hidden, money still counted, name restored on un-hide. **Failed-payment and closed-checkout screens still not exercised.**
 
+- Safety net: `reconcile-pending` Edge Function + pg_cron every 10 min + 1 h order expiry. Tested by forcing the paid ₹99 test order back to pending → job recovered it (payment id restored). Also saw a Cashfree sandbox 504 timeout on order creation — handled correctly (order marked failed, fan gets an error, retry worked).
+- `GO-LIVE.md` checklist written (owner steps in Cashfree + Supabase, Claude steps, first ₹1 payment, emergency pause, rollback).
+
 ### Next steps to go live with test payments
 1. User: fix the Cashfree test-mode "server error" (support chat), generate test App ID + Secret Key.
 2. User: add Supabase secrets `CASHFREE_APP_ID`, `CASHFREE_SECRET_KEY`, `CASHFREE_ENV=sandbox` (Dashboard → Edge Functions → Secrets).
