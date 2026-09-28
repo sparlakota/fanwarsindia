@@ -27,7 +27,7 @@ const FanCard = (function () {
       ${rank ? `<p class="font-name text-fwred text-xs font-medium uppercase tracking-wide">#${rank} on FanWarsIndia</p>` : ""}
 
       <p class="font-name font-medium text-white text-sm uppercase tracking-wide mt-3 max-w-full truncate">${escapeHTML(supporterName)}</p>
-      <p class="text-white/35 text-[10px] tracking-[0.2em] mt-0.5">${token}</p>
+      <p class="text-white/35 text-[10px] tracking-[0.2em] mt-0.5">${escapeHTML(token || "")}</p>
 
       <div class="mt-auto pt-3">
         <p class="font-name text-white/60 text-[10px] uppercase tracking-[0.15em]">Your Star. Your Pride. Your War.</p>

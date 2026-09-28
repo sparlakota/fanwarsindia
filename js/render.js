@@ -184,7 +184,9 @@ function topFanCardHTML(fan, rank) {
     <div class="min-w-0 flex-1">
       <h3 class="font-name font-semibold uppercase tracking-wide truncate ${isTop3 ? "text-xl sm:text-2xl" : "text-base sm:text-lg"} leading-tight">${escapeHTML(fan.name)}</h3>
       <p class="font-name font-medium text-fwred/90 text-[12px] uppercase tracking-[0.12em] leading-snug">${backing}</p>
-      <p class="mt-0.5 text-white/45 text-[11px] flex items-center gap-1.5">${levelBadgeHTML(level, 10)} ${level.label}</p>
+      <p class="mt-0.5 text-white/45 text-[11px] flex items-center gap-1.5">${levelBadgeHTML(level, 10)} ${level.label}${
+        fan.phoneLast4 ? `<span class="text-white/25">·</span><span title="Last 4 digits of their number">••${escapeHTML(fan.phoneLast4)}</span>` : ""
+      }</p>
     </div>
     <div class="shrink-0 text-right">
       <p class="font-display metric-value ${isTop3 ? "text-2xl sm:text-3xl" : "text-lg"} leading-none">${formatRupees(fan.total)}</p>
@@ -193,9 +195,38 @@ function topFanCardHTML(fan, rank) {
   </article>`;
 }
 
+function skeletonCardsHTML(count) {
+  return Array.from(
+    { length: count },
+    (_, i) => `
+    <div class="rounded-lg border border-white/10 bg-white/[0.03] p-3 flex items-center gap-3 animate-pulse" aria-hidden="true">
+      <div class="w-7 h-4 rounded bg-white/10"></div>
+      <div class="w-11 h-14 rounded-md bg-white/10"></div>
+      <div class="flex-1 space-y-2">
+        <div class="h-4 rounded bg-white/10" style="width:${55 - i * 6}%"></div>
+        <div class="h-3 w-1/4 rounded bg-white/[0.07]"></div>
+      </div>
+    </div>`
+  ).join("");
+}
+
+function loadErrorHTML(what) {
+  return `
+  <div class="rounded-lg border border-white/10 bg-white/[0.03] px-6 py-8 text-center">
+    <p class="text-white/70 text-sm mb-4">Couldn't load ${what}. Check your connection.</p>
+    <button class="retry-load chip-outline tap-active rounded-md px-5 py-2.5 font-display uppercase text-sm">Try again</button>
+  </div>`;
+}
+
 function renderLeaderboard() {
   const list = document.getElementById("leaderboard-list");
   const mode = Store.state.leaderboardMode;
+  renderToggle(mode);
+  // Never show "everyone at ₹0" before the real numbers arrive — it reads as a wiped leaderboard.
+  if (!Store.state.loaded) {
+    list.innerHTML = Store.state.loadError ? loadErrorHTML("the leaderboard") : skeletonCardsHTML(5);
+    return;
+  }
   if (mode === "fans") {
     const fans = Store.getTopFans(20);
     list.innerHTML = fans.length
@@ -208,7 +239,6 @@ function renderLeaderboard() {
     const board = Store.getLeaderboard(mode);
     list.innerHTML = board.map((actor, i) => actorCardHTML(actor, i + 1, mode)).join("");
   }
-  renderToggle(mode);
 }
 
 function activityItemHTML(item) {
@@ -228,16 +258,27 @@ function activityItemHTML(item) {
 
 function renderActivity() {
   const list = document.getElementById("activity-list");
+  if (!Store.state.loaded) {
+    list.innerHTML = Store.state.loadError
+      ? `<p class="text-white/40 text-sm py-6 text-center">Couldn't load fan activity.</p>`
+      : Array.from(
+          { length: 3 },
+          () => `<div class="flex items-center gap-3 py-3 animate-pulse" aria-hidden="true">
+                   <div class="w-9 h-9 rounded-full bg-white/10 shrink-0"></div>
+                   <div class="h-3 flex-1 rounded bg-white/10"></div>
+                 </div>`
+        ).join("");
+    return;
+  }
   const items = Store.state.activity.slice(0, 8);
   list.innerHTML = items.length
     ? items.map(activityItemHTML).join("")
     : `<p class="text-white/40 text-sm py-6 text-center">No fan activity yet — be the first to back your star.</p>`;
 }
 
+// Safe for text AND attribute values (quotes included) — fan names come from strangers.
 function escapeHTML(str) {
-  const div = document.createElement("div");
-  div.textContent = str;
-  return div.innerHTML;
+  return String(str == null ? "" : str).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 }
 
 function flashMetric(actorId) {
