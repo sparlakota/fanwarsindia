@@ -13,6 +13,11 @@ const ALLOWED_ORIGINS = [
 // Vercel preview deployments of THIS project only (team slug shab5), e.g. fanwarsindia-git-payments-shab5.vercel.app
 const PREVIEW_ORIGIN = /^https:\/\/fanwarsindia(-[a-z0-9-]+)?-shab5\.vercel\.app$/;
 
+/** The public site. Sandbox (test-card) payments are refused from here so they can't reach real fans. */
+export function isProductionSite(origin: string): boolean {
+  return origin === "https://www.fanwarsindia.com" || origin === "https://fanwarsindia.com";
+}
+
 export function isAllowedOrigin(origin: string): boolean {
   return ALLOWED_ORIGINS.includes(origin) || PREVIEW_ORIGIN.test(origin);
 }

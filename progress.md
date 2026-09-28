@@ -106,6 +106,8 @@ Open (not code): Cashfree checkout brand name ("Business Name"); no moderation f
 
 - Safety net: `reconcile-pending` Edge Function + pg_cron every 10 min + 1 h order expiry. Tested by forcing the paid ₹99 test order back to pending → job recovered it (payment id restored). Also saw a Cashfree sandbox 504 timeout on order creation — handled correctly (order marked failed, fan gets an error, retry worked).
 - Speed (user reported slow test payments): measured — our functions cost ~0.3 s warm but 2–4 s on a cold start; Cashfree **sandbox** order creation varied 1–11 s and returned 504 twice today (the main cause; production is expected to be faster). Fixes: Cashfree SDK preloaded + both payment functions woken when the support sheet opens; CORS preflight cached 2 h (`Access-Control-Max-Age`); create-order's DB checks run in parallel; "taking longer than usual" message after 5 s; clear `gateway_error` message.
+- New hero images (user-supplied, crowd-only, no actor likenesses): tall `hero-mobile.jpg` for phones, wide `hero-desktop.jpg` for laptops via `<picture>`; 2 MB PNGs compressed to 154/238 KB; old `hero-bg.jpg` (AI star lookalikes on banners) deleted; og-image rebuilt; hero scrim lightened for the darker new photos.
+- **Everything except payments published to fanwarsindia.com**: `is_test` flag + `p_include_test` hides sandbox payments from the live site; create-order refuses sandbox payments from the live domain; live Support shows "opens very soon" (`paymentsOpenOnProduction` in config.js). `payments` branch merged into master.
 - `GO-LIVE.md` checklist written (owner steps in Cashfree + Supabase, Claude steps, first ₹1 payment, emergency pause, rollback).
 
 ### Next steps to go live with test payments

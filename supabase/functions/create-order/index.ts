@@ -1,7 +1,15 @@
 // POST { actor_id, amount, name, phone } -> { order_id, payment_session_id, environment }
 // Creates a pending contribution and a Cashfree order for it. Nothing is credited here —
 // that only happens in syncOrder() once Cashfree reports the order as PAID.
-import { cashfreeConfig, cashfreeHeaders, corsHeaders, db, json, returnBaseFor } from "../_shared/common.ts";
+import {
+  cashfreeConfig,
+  cashfreeHeaders,
+  corsHeaders,
+  db,
+  isProductionSite,
+  json,
+  returnBaseFor,
+} from "../_shared/common.ts";
 
 const MIN_AMOUNT = 1;
 const MAX_AMOUNT = 100000;
@@ -45,6 +53,10 @@ Deno.serve(async (req) => {
 
   const cf = cashfreeConfig();
   if (!cf) return json(req, { error: "payments_not_configured" }, 503);
+  // Until live keys are in (CASHFREE_ENV=production), fanwarsindia.com itself can't take test-card payments.
+  if (cf.env === "sandbox" && isProductionSite(req.headers.get("origin") ?? "")) {
+    return json(req, { error: "payments_not_configured" }, 503);
+  }
 
   let body: Record<string, unknown>;
   try {
@@ -104,6 +116,7 @@ Deno.serve(async (req) => {
     cashfree_order_id: orderId,
     card_token: cardToken,
     client_ip_hash: clientIpHash,
+    is_test: cf.env === "sandbox", // hidden from the live site's leaderboards
     status: "pending",
   });
   if (insErr) {

@@ -52,10 +52,11 @@ const Store = (function () {
 
   async function load() {
     try {
+      const includeTest = FW_CONFIG.showTestData;
       const [board, activity, fans] = await Promise.all([
-        rpc("public_leaderboard"),
-        rpc("public_activity"),
-        rpc("public_top_fans", { p_limit: 20 }),
+        rpc("public_leaderboard", { p_include_test: includeTest }),
+        rpc("public_activity", { p_include_test: includeTest }),
+        rpc("public_top_fans", { p_limit: 20, p_include_test: includeTest }),
       ]);
       const byId = new Map(board.map((r) => [Number(r.id), r]));
       state.actors = ACTORS.map((a) => {

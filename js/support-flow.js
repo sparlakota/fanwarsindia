@@ -70,6 +70,10 @@ const SupportFlow = (function () {
     if (!actor) return;
     flow = { ...blankFlow(), open: true, actor };
     document.body.style.overflow = "hidden";
+    if (!FW_CONFIG.paymentsOpen) {
+      goTo("soon");
+      return;
+    }
     render();
     prepareForPayment();
   }
@@ -337,6 +341,21 @@ const SupportFlow = (function () {
     `);
   }
 
+  function soonStepHTML() {
+    const a = flow.actor;
+    return shell(`
+      <div class="p-6 pb-8 text-center">
+        <div class="flex justify-end mb-1">${closeBtnHTML()}</div>
+        <img src="${a.image}" alt="${a.name}" class="w-24 h-28 mx-auto rounded-lg object-cover border-2 border-fwred/60 mb-4" />
+        <p class="text-white/50 text-xs uppercase tracking-[0.2em]">Get ready to back</p>
+        <p class="font-display uppercase text-2xl text-fwred leading-tight mt-1">${actorTitle(a)}</p>
+        <p class="font-display uppercase text-xl mt-5">Support opens very soon</p>
+        <p class="text-white/60 text-sm mt-2 leading-relaxed">We're switching on secure payments with our payment partner. Check back shortly — the war starts at zero, and the first fans in lead the board.</p>
+        <button id="done-btn" class="fire-btn tap-active w-full rounded-md py-4 mt-6 font-display uppercase text-lg">Got it</button>
+      </div>
+    `);
+  }
+
   function failedStepHTML() {
     const canRetry = !!flow.actor && !!flow.amount;
     return shell(`
@@ -450,6 +469,7 @@ const SupportFlow = (function () {
             : "Hold tight — don't close this page."
         ),
       verifying: () => busyStepHTML("Confirming your payment", "Checking with the bank. This takes a few seconds."),
+      soon: soonStepHTML,
       failed: failedStepHTML,
       processing: processingStepHTML,
       success: successStepHTML,

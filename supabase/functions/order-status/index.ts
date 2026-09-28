@@ -39,7 +39,7 @@ Deno.serve(async (req) => {
   if (row.status !== "success") return json(req, base);
 
   const [{ data: board }, { data: mine }] = await Promise.all([
-    supabase.rpc("public_leaderboard"),
+    supabase.rpc("public_leaderboard", { p_include_test: row.is_test }), // rank among the same kind of payments
     supabase
       .from("contributions")
       .select("amount")

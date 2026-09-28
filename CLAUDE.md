@@ -6,7 +6,9 @@ Read this first. For the "why" behind non-obvious choices, see [decisions.md](de
 
 A Telugu-cinema fandom leaderboard site. Fans "support" their favorite actor with a rupee amount; it moves two leaderboards (Fan Power = cumulative ₹, Fan Army = unique supporter count). Brand: "pure cult, pure mass, pure fan" — raw, cinematic, tribal, explicitly **not** SaaS/corporate/casino/AI-generic. Colors: near-black `#050505`, white, fire red `#FF1A1A`, deep red `#B00000`.
 
-Static frontend (Vercel) + **Supabase backend** (Postgres + 3 Edge Functions) + **Cashfree** payments. The payment flow is fully built but **not live until the Cashfree keys are set as Supabase secrets** — until then `create-order` answers `payments_not_configured` and fans see "Payments open very soon". See "Backend & payments" below and progress.md.
+Static frontend (Vercel) + **Supabase backend** (Postgres + 4 Edge Functions) + **Cashfree** payments. As of 2026-09-28 the **whole site is live on fanwarsindia.com except payments**: Cashfree runs in sandbox (test) mode, and the live domain shows "Support opens very soon" instead of checkout. Payments open on launch day by following `GO-LIVE.md` (live keys + `CASHFREE_ENV=production` + flip `paymentsOpenOnProduction` in `js/config.js`).
+
+**Test vs live data**: every contribution created while `CASHFREE_ENV=sandbox` has `is_test = true`. The `public_*` functions take `p_include_test` (default false); the live domain never shows test rows (`FW_CONFIG.showTestData` is false there), while preview links and localhost show them for testing. `create-order` refuses sandbox payments whose Origin is the live domain.
 
 ## Stack — deliberately no build tooling
 
@@ -22,7 +24,7 @@ There's no `npm start`. Use the PowerShell static file server:
 powershell -File scripts/serve.ps1
 ```
 
-Serves the project root on `http://localhost:8791` (or via the `fanwarsindia-static` launch config in `.claude/launch.json`, which the Browser pane's `preview_start` tool picks up automatically). The server sets `Cache-Control: no-cache, no-store, must-revalidate` on every response — do not remove this, it caused a real multi-turn debugging session before (see decisions.md). All local script/CSS references in `index.html` also carry a `?v=14` cache-busting query string; **bump that version number** if you ever edit a JS/CSS file and need to guarantee a stale-cache-proof reload for the user.
+Serves the project root on `http://localhost:8791` (or via the `fanwarsindia-static` launch config in `.claude/launch.json`, which the Browser pane's `preview_start` tool picks up automatically). The server sets `Cache-Control: no-cache, no-store, must-revalidate` on every response — do not remove this, it caused a real multi-turn debugging session before (see decisions.md). All local script/CSS references in `index.html` also carry a `?v=16` cache-busting query string; **bump that version number** if you ever edit a JS/CSS file and need to guarantee a stale-cache-proof reload for the user.
 
 The server binds to `127.0.0.1` only. It is **not** reachable from other devices (phone, etc.) — that was evaluated and intentionally not set up because the laptop is sometimes on school wifi and opening the port safely would need admin-elevated `netsh` commands the user chose to skip for now. See decisions.md if this comes up again.
 
@@ -57,7 +59,10 @@ GO-LIVE.md                Step-by-step checklist for the day live Cashfree keys 
 assets/
   actors/*.jpg              Real licensed actor photos (20), filenames = actor slug
   logo/                    crown-mark.png, wordmark-mark.png, fanwarsindia-logo.png — the REAL brand logo (see decisions.md)
-  hero/hero-bg.jpg           Hero background photo (patched + brightened, see decisions.md)
+  hero/hero-mobile.jpg       Hero for phones (941x1672, served via <picture> below 768px)
+  hero/hero-desktop.jpg      Hero for tablets/laptops (1672x941). Both user-supplied (2026-09-28), crowd-only —
+                             no actor likenesses (the old hero-bg.jpg had AI lookalikes on banners; deleted).
+                             Rebuild from a PNG with scripts/to-jpeg.ps1; rebuild og-image with make-og-image.ps1 -Hero assets/hero/hero-desktop.jpg
   og/og-image.jpg            1200x630 link-preview image (built by scripts/make-og-image.ps1)
 scripts/                  One-off PowerShell/bash tools used to build the above assets (kept for reproducibility, not run automatically)
 .claude/launch.json       Browser-pane preview config (runs scripts/serve.ps1)
@@ -83,7 +88,7 @@ Supabase project `fanwarsindia` (id `cntrkcpwetjjifubccha`, ap-south-1), managed
 
 **Moderation (hide an abusive name)**: `contributions.name_hidden`. Hidden names show publicly as "A fan" in Fan Activity and Top Fans; the money still counts. The owner hides a name either by ticking `name_hidden` in Supabase → Table Editor → contributions, or in the SQL editor: `select admin_hide_fan_name('FW-XXXXXX');` (one contribution) / `select admin_hide_fan_name('FW-XXXXXX', true);` (every contribution from that fan's phone) / add `, false` as a third argument to un-hide. `admin_hide_fan_name` is revoked from anon/authenticated — owner-only.
 
-**Test branch / previews**: payment work is developed on the `payments` branch. Vercel builds every non-`master` push as a preview (`fanwarsindia-git-payments-shab5.vercel.app`) using the same Supabase backend + sandbox keys; Edge Function CORS accepts `https://fanwarsindia(-…)?-shab5.vercel.app` (this Vercel team only). `master` = what fanwarsindia.com serves — merge `payments` into it only at go-live.
+**Branches / previews**: `master` = fanwarsindia.com. The `payments` branch was merged into master on 2026-09-28; keep using a non-master branch for risky work — Vercel builds each as a preview (`fanwarsindia-git-<branch>-shab5.vercel.app`, behind Vercel login) on the same Supabase backend. Edge Function CORS accepts `https://fanwarsindia(-…)?-shab5.vercel.app` (this Vercel team only).
 
 **Safety net (`reconcile-pending`)**: pg_cron job `reconcile-pending-payments` runs every 10 min and POSTs (via pg_net) to the `reconcile-pending` Edge Function with header `x-reconcile-token` = Vault secret `reconcile_token`; the function checks it with `reconcile_token_ok()` (service_role only) and runs `syncOrder()` on pending orders 2 min–48 h old. Orders are created with a 1 h `order_expiry_time`, so abandoned checkouts become EXPIRED → `failed`. Verified 2026-09-28 by forcing a paid order back to pending: the job recovered it. **Go-live steps: see `GO-LIVE.md`.**
 

@@ -25,15 +25,17 @@ Supabase → project **fanwarsindia** → Edge Functions → Secrets. Replace th
 
 Save. From this moment the preview link also takes **real money** (it shares the same server) — it's behind your Vercel login, so only you can use it.
 
-## C. Clear test data + publish (Claude does this — just say "go live")
+## C. Open payments on the live site (Claude does this — just say "go live")
 
-1. Delete every pre-launch test payment (everything so far was sandbox), so the leaderboard starts at zero:
+The full site is already live; only payments are switched off. Test-card payments are tagged `is_test` and never shown on fanwarsindia.com, and the server refuses test-mode payments from the live domain.
+
+1. In `js/config.js` set `paymentsOpenOnProduction = true`, bump the `?v=` cache version, commit and push `master` → Vercel deploys. (The server side opens by itself once `CASHFREE_ENV=production`.)
+2. Tidy the database (optional — test rows are already invisible on the live site):
    ```sql
-   select count(*), sum(amount) from contributions;   -- look first
-   delete from contributions;                          -- everything before launch is test data
+   select count(*), sum(amount) from contributions where is_test;   -- look first
+   delete from contributions where is_test;
    ```
-2. Publish: merge the `payments` branch into `master` → Vercel deploys fanwarsindia.com.
-3. Check the live site loads real data, the policy pages are linked, and nothing is served that shouldn't be (`/progress.md` must be 404).
+3. Check: Support on fanwarsindia.com opens the real checkout (not "opens very soon"), and `/progress.md` is still 404.
 
 ## D. First real payment (owner, ~3 minutes)
 
@@ -49,4 +51,5 @@ Save. From this moment the preview link also takes **real money** (it shares the
 - **Hide an abusive name**: Supabase → SQL editor → `select admin_hide_fan_name('FW-XXXXXX');` (add `, true` to hide every contribution from that fan; `, false, false` to un-hide).
 - **Stuck payments** are rechecked automatically every 10 minutes (`reconcile-pending` job) — a fan who paid is never left uncounted. Unpaid checkouts expire after 1 hour.
 - **Refund requests** go to `support@fanwarsindia.com` (forwards to your Gmail). Refunds are issued from the Cashfree dashboard; after refunding, ask Claude to delete or mark that contribution so the leaderboard matches.
-- **Roll back completely**: Claude reverts `master` to the previous commit; the old site comes back within a minute.
+- **Close payments again without taking the site down**: set `paymentsOpenOnProduction = false` in `js/config.js` and push (or use the emergency pause above).
+- **Roll back completely**: Claude reverts `master` to the previous commit; the previous site comes back within a minute.
