@@ -47,7 +47,7 @@
   };
 </script>
 
-<link rel="stylesheet" href="css/styles.css?v=9" />
+<link rel="stylesheet" href="css/styles.css?v=16" />
 <link rel="icon" href="assets/logo/crown-mark.png" type="image/png" />
 </head>
 <body class="font-body bg-fwblack text-fwwhite">
@@ -69,11 +69,16 @@
 <main id="top">
   <!-- HERO -->
   <section class="relative px-4 pt-3 sm:pt-4 pb-16 text-center overflow-hidden min-h-[560px] sm:min-h-[700px] flex items-start">
-    <img
-      src="assets/hero/hero-bg.jpg"
-      alt=""
-      class="absolute inset-0 z-0 w-full h-full object-cover object-[center_28%]"
-    />
+    <!-- Tall image for phones, wide for tablets/laptops; each device downloads only its own. -->
+    <picture>
+      <source media="(max-width: 767px)" srcset="assets/hero/hero-mobile.jpg" />
+      <img
+        src="assets/hero/hero-desktop.jpg"
+        alt=""
+        fetchpriority="high"
+        class="absolute inset-0 z-0 w-full h-full object-cover object-[center_40%] max-md:object-bottom"
+      />
+    </picture>
     <div class="absolute inset-0 hero-scrim"></div>
     <div class="hero-glow"></div>
     <div class="relative z-10 max-w-2xl mx-auto">
@@ -161,13 +166,14 @@
 <!-- SUPPORT FLOW MODAL ROOT -->
 <div id="modal-root"></div>
 
-<script src="js/icons.js?v=9"></script>
-<script src="js/actors.js?v=9"></script>
-<script src="js/fanLevel.js?v=9"></script>
-<script src="js/store.js?v=9"></script>
-<script src="js/render.js?v=9"></script>
-<script src="js/fan-card.js?v=9"></script>
-<script src="js/support-flow.js?v=9"></script>
-<script src="js/main.js?v=9"></script>
+<script src="js/config.js?v=16"></script>
+<script src="js/icons.js?v=16"></script>
+<script src="js/actors.js?v=16"></script>
+<script src="js/fanLevel.js?v=16"></script>
+<script src="js/store.js?v=16"></script>
+<script src="js/render.js?v=16"></script>
+<script src="js/fan-card.js?v=16"></script>
+<script src="js/support-flow.js?v=16"></script>
+<script src="js/main.js?v=16"></script>
 </body>
 </html>

@@ -60,17 +60,18 @@ svg[viewBox="0 0 24 24"] {
     radial-gradient(ellipse 80% 60% at 50% 100%, rgba(176, 0, 0, 0.14), transparent 70%);
 }
 
-/* Dark scrim over the hero background photo so overlaid text stays legible */
+/* Scrim over the hero photo. The hero images are shot with a dark sky already, so this only
+   steadies the headline area and fades the bottom into the page background. */
 .hero-scrim {
   z-index: 1;
   pointer-events: none;
   background: linear-gradient(
     to bottom,
-    rgba(5, 5, 5, 0.78) 0%,
-    rgba(5, 5, 5, 0.66) 38%,
-    rgba(5, 5, 5, 0.4) 60%,
-    rgba(5, 5, 5, 0.16) 78%,
-    rgba(5, 5, 5, 0.4) 100%
+    rgba(5, 5, 5, 0.3) 0%,
+    rgba(5, 5, 5, 0.22) 35%,
+    rgba(5, 5, 5, 0.3) 60%,
+    rgba(5, 5, 5, 0.12) 80%,
+    rgba(5, 5, 5, 0.75) 100%
   );
 }
 

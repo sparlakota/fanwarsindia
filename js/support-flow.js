@@ -1,53 +1,89 @@
 /**
- * FanWarsIndia — Support flow modal (amount -> name -> celebration/share).
- * Frontend-only simulation. Wiring point for a real payment provider later
- * is clearly marked in Store.addContribution().
+ * FanWarsIndia — Support flow sheet.
+ * amount -> details (name + mobile) -> paying (Cashfree checkout) -> verifying -> success
+ *                                                                   \-> failed | processing
+ * Nothing is credited in the browser: the server confirms with Cashfree, and "success" is only
+ * shown once order-status says so.
  */
 
 const SupportFlow = (function () {
   const AMOUNT_OPTIONS = [49, 99, 199, 499, 999];
   const MIN_AMOUNT = 1;
   const MAX_AMOUNT = 100000;
+  const BUSY_STEPS = ["paying", "verifying"];
+
+  const ERROR_MESSAGES = {
+    payments_not_configured: "Payments open very soon — we're finishing setup with our payment partner.",
+    invalid_phone: "Enter a valid 10-digit Indian mobile number.",
+    invalid_name: "Enter your name.",
+    invalid_amount: `Choose an amount between ₹${MIN_AMOUNT} and ₹${MAX_AMOUNT.toLocaleString("en-IN")}.`,
+    too_many_attempts: "Too many attempts from this number. Try again in a few minutes.",
+    network: "Couldn't reach the server. Check your connection and try again.",
+    checkout_load: "Couldn't open the payment window. Check your connection and try again.",
+    gateway_error: "Our payment partner didn't respond in time. Nothing was charged — please try again.",
+  };
+  const DEFAULT_ERROR = "Something went wrong starting the payment. Please try again.";
+
+  function blankFlow() {
+    return {
+      open: false,
+      step: "amount",
+      actor: null,
+      amount: null,
+      customMode: false,
+      supporterName: "",
+      phone: "",
+      orderId: null,
+      result: null,
+      error: null,
+    };
+  }
+
+  let flow = blankFlow();
 
   function cleanAmount(value) {
     const n = Math.round(Number(value));
     return Number.isFinite(n) && n >= MIN_AMOUNT && n <= MAX_AMOUNT ? n : null;
   }
 
+  /** "+91 98765 43210" / "098765 43210" / "9876543210" -> "9876543210"; anything else -> null. */
+  function normalizePhone(raw) {
+    let digits = String(raw || "").replace(/\D/g, "");
+    if (digits.length === 12 && digits.startsWith("91")) digits = digits.slice(2);
+    if (digits.length === 11 && digits.startsWith("0")) digits = digits.slice(1);
+    return /^[6-9]\d{9}$/.test(digits) ? digits : null;
+  }
+
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const root = () => document.getElementById("modal-root");
+
   function closeBtnHTML() {
     return `<button id="modal-close" aria-label="Close" class="icon-btn text-white/50 hover:text-white w-9 h-9 -mr-2 flex items-center justify-center"><span class="w-4 h-4">${Icons.close()}</span></button>`;
   }
 
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && flow.open) close();
+    if (e.key === "Escape" && flow.open && !BUSY_STEPS.includes(flow.step)) close();
   });
 
-  let flow = {
-    open: false,
-    step: "amount", // amount | name | success
-    actor: null,
-    amount: null,
-    customMode: false,
-    supporterName: "",
-    result: null,
-  };
-
-  const root = () => document.getElementById("modal-root");
-
   function open(actorId) {
-    const actor = Store.state.actors.find((a) => a.id === actorId);
+    const actor = Store.getActorById(actorId);
     if (!actor) return;
-    flow = {
-      open: true,
-      step: "amount",
-      actor,
-      amount: null,
-      customMode: false,
-      supporterName: "",
-      result: null,
-    };
+    flow = { ...blankFlow(), open: true, actor };
     document.body.style.overflow = "hidden";
+    if (!FW_CONFIG.paymentsOpen) {
+      goTo("soon");
+      return;
+    }
     render();
+    prepareForPayment();
+  }
+
+  /** Re-enter after a Cashfree redirect back to /?order_id=... */
+  function resume(orderId) {
+    if (!/^fw_[a-z0-9_]{6,40}$/.test(orderId)) return;
+    flow = { ...blankFlow(), open: true, orderId };
+    document.body.style.overflow = "hidden";
+    verify(orderId, { userClosed: false });
   }
 
   function close() {
@@ -56,20 +92,126 @@ const SupportFlow = (function () {
     root().innerHTML = "";
   }
 
-  function goToName(amount) {
-    flow.amount = amount;
-    flow.step = "name";
+  function goTo(step) {
+    flow.step = step;
     render();
   }
 
-  function submit(name) {
-    flow.supporterName = name;
-    const result = Store.addContribution(flow.actor.id, flow.amount, name);
-    flow.result = result;
-    flow.step = "success";
-    render(); // Store.addContribution() already triggered the homepage re-render via subscribe()
-    setTimeout(() => flashMetric(flow.actor.id), 50);
+  // ---------- payment ----------
+
+  let cashfreeScript = null;
+  function loadCashfreeScript() {
+    if (!cashfreeScript) {
+      cashfreeScript = new Promise((resolve, reject) => {
+        const s = document.createElement("script");
+        s.src = "https://sdk.cashfree.com/js/v3/cashfree.js";
+        s.onload = resolve;
+        s.onerror = () => {
+          cashfreeScript = null;
+          reject(new Error("checkout_load"));
+        };
+        document.head.appendChild(s);
+      });
+    }
+    return cashfreeScript;
   }
+  function loadCashfree(mode) {
+    return loadCashfreeScript().then(() => window.Cashfree({ mode }));
+  }
+
+  /** Called when the sheet opens: fetch Cashfree's checkout code and wake our server in the background. */
+  function prepareForPayment() {
+    loadCashfreeScript().catch(() => {});
+    Store.warmPaymentServer();
+  }
+
+  async function startPayment() {
+    flow.error = null;
+    flow.slow = false;
+    goTo("paying");
+    // If the payment partner is slow, say so instead of leaving a silent spinner.
+    const slowTimer = setTimeout(() => {
+      if (flow.open && flow.step === "paying") {
+        flow.slow = true;
+        render();
+      }
+    }, 5000);
+
+    let order;
+    try {
+      order = await Store.createOrder({
+        actorId: flow.actor.id,
+        amount: flow.amount,
+        name: flow.supporterName.trim(),
+        phone: flow.phone,
+      });
+    } catch (e) {
+      clearTimeout(slowTimer);
+      flow.error = ERROR_MESSAGES[e.code] || DEFAULT_ERROR;
+      goTo("details");
+      return;
+    }
+    clearTimeout(slowTimer);
+    flow.orderId = order.order_id;
+
+    let result;
+    try {
+      const cashfree = await loadCashfree(order.environment === "production" ? "production" : "sandbox");
+      result = await cashfree.checkout({ paymentSessionId: order.payment_session_id, redirectTarget: "_modal" });
+    } catch (e) {
+      flow.error = ERROR_MESSAGES.checkout_load;
+      goTo("details");
+      return;
+    }
+
+    // Some bank/UPI flows leave the page; we pick the order up again via ?order_id= on return.
+    if (result && result.redirect) return;
+    await verify(order.order_id, { userClosed: !!(result && result.error) });
+  }
+
+  /**
+   * Poll the server until Cashfree has confirmed (or rejected) the order.
+   * If the fan closed the checkout, give it a few seconds (they may have paid just before closing).
+   */
+  async function verify(orderId, { userClosed }) {
+    goTo("verifying");
+    const attempts = userClosed ? 3 : 20;
+    for (let i = 0; i < attempts; i++) {
+      let s = null;
+      try {
+        s = await Store.getOrderStatus(orderId);
+      } catch (e) {
+        if (e.code === "not_found" || e.code === "invalid_order") break;
+      }
+      if (!flow.open) return;
+      if (s && s.status === "success") return finishSuccess(s);
+      if (s && s.status === "failed") return goTo("failed");
+      await sleep(2000);
+      if (!flow.open) return;
+    }
+    goTo(userClosed ? "failed" : "processing");
+  }
+
+  function finishSuccess(s) {
+    const actor = Store.getActorById(s.actor_id);
+    if (!actor) return goTo("processing");
+    flow.actor = actor;
+    flow.amount = Number(s.amount);
+    flow.supporterName = s.name;
+    flow.result = {
+      token: s.card_token,
+      cumulative: Number(s.cumulative),
+      previousFanPower: Number(s.previous_fan_power),
+      newFanPower: Number(s.new_fan_power),
+      previousRank: s.previous_rank,
+      newRank: s.new_rank,
+      level: getFanLevel(Number(s.cumulative)),
+    };
+    goTo("success");
+    Store.load().then(() => flashMetric(actor.id));
+  }
+
+  // ---------- markup ----------
 
   function shell(innerHTML) {
     return `
@@ -114,7 +256,7 @@ const SupportFlow = (function () {
         </div>
 
         <div id="custom-amount-wrap" class="${flow.customMode ? "" : "hidden"} mb-3">
-          <label class="text-xs uppercase tracking-wide text-white/40 block mb-1">Enter amount (₹)</label>
+          <label for="custom-amount-input" class="text-xs uppercase tracking-wide text-white/40 block mb-1">Enter amount (₹)</label>
           <input
             id="custom-amount-input"
             type="number"
@@ -136,7 +278,7 @@ const SupportFlow = (function () {
     `);
   }
 
-  function nameStepHTML() {
+  function detailsStepHTML() {
     const a = flow.actor;
     return shell(`
       <div class="p-5 pb-8">
@@ -150,21 +292,94 @@ const SupportFlow = (function () {
         <p class="text-white/50 text-xs uppercase tracking-wide mb-1">Backing ${actorTitle(a)} with</p>
         <p class="font-display text-4xl text-fwred mb-6">${formatRupees(flow.amount)}</p>
 
-        <p class="font-display uppercase text-lg mb-3">What's your name?</p>
+        <label for="supporter-name-input" class="font-display uppercase text-lg mb-2 block">Your name</label>
         <input
           id="supporter-name-input"
           type="text"
           maxlength="40"
-          placeholder="Enter your name"
+          autocomplete="name"
+          placeholder="Shown on your Fan Card and the fan wall"
           value="${escapeHTML(flow.supporterName)}"
-          class="w-full bg-white/5 border border-white/15 rounded-md px-4 py-4 text-lg font-body focus:outline-none focus:border-fwred mb-2"
+          class="w-full bg-white/5 border border-white/15 rounded-md px-4 py-3.5 text-lg font-body focus:outline-none focus:border-fwred mb-5"
         />
-        <p class="text-[11px] text-white/30 mb-6 uppercase tracking-wide">Shown on your Fan Card and the activity wall</p>
 
-        <button id="name-submit" disabled
+        <label for="supporter-phone-input" class="font-display uppercase text-lg mb-2 block">Mobile number</label>
+        <div class="flex items-stretch rounded-md border border-white/15 bg-white/5 focus-within:border-fwred mb-2">
+          <span class="px-3 flex items-center text-white/50 text-lg border-r border-white/10">+91</span>
+          <input
+            id="supporter-phone-input"
+            type="tel"
+            inputmode="numeric"
+            autocomplete="tel-national"
+            maxlength="14"
+            placeholder="10-digit mobile"
+            value="${escapeHTML(flow.phone)}"
+            class="flex-1 min-w-0 bg-transparent px-3 py-3.5 text-lg font-body focus:outline-none"
+          />
+        </div>
+        <p class="text-[11px] text-white/40 mb-5 leading-relaxed">One number = one fan, so Fan Army stays real. We never show your number — only the last 4 digits appear on Top Fans.</p>
+
+        ${flow.error ? `<p id="flow-error" role="alert" class="text-sm text-fwred bg-fwred/10 border border-fwred/30 rounded-md px-3 py-2.5 mb-4">${escapeHTML(flow.error)}</p>` : ""}
+
+        <button id="pay-btn" disabled
           class="fire-btn tap-active w-full rounded-md py-4 font-display uppercase text-lg opacity-40 pointer-events-none flex items-center justify-center gap-2">
-          <span class="w-4 h-4">${Icons.flame()}</span> Confirm Support
+          <span class="w-4 h-4">${Icons.flame()}</span> Pay ${formatRupees(flow.amount)}
         </button>
+        <p class="text-[11px] text-white/35 text-center mt-3">Secure payment by Cashfree · UPI, cards, net banking</p>
+        <p class="text-[11px] text-white/40 text-center mt-2 leading-relaxed">By paying you agree to our <a href="terms.html" target="_blank" rel="noopener" class="underline hover:text-white">Terms</a>, <a href="privacy.html" target="_blank" rel="noopener" class="underline hover:text-white">Privacy Policy</a> and <a href="refund.html" target="_blank" rel="noopener" class="underline hover:text-white">Refund Policy</a>. Contributions are voluntary, non-refundable and go to FanWarsIndia, not to the actor.</p>
+      </div>
+    `);
+  }
+
+  function busyStepHTML(title, subtitle) {
+    return shell(`
+      <div class="p-8 pb-10 text-center" aria-live="polite">
+        <div class="mx-auto mb-5 w-12 h-12 rounded-full border-4 border-white/10 border-t-fwred animate-spin"></div>
+        <p class="font-display uppercase text-2xl">${title}</p>
+        <p class="text-white/50 text-sm mt-2">${subtitle}</p>
+      </div>
+    `);
+  }
+
+  function soonStepHTML() {
+    const a = flow.actor;
+    return shell(`
+      <div class="p-6 pb-8 text-center">
+        <div class="flex justify-end mb-1">${closeBtnHTML()}</div>
+        <img src="${a.image}" alt="${a.name}" class="w-24 h-28 mx-auto rounded-lg object-cover border-2 border-fwred/60 mb-4" />
+        <p class="text-white/50 text-xs uppercase tracking-[0.2em]">Get ready to back</p>
+        <p class="font-display uppercase text-2xl text-fwred leading-tight mt-1">${actorTitle(a)}</p>
+        <p class="font-display uppercase text-xl mt-5">Support opens very soon</p>
+        <p class="text-white/60 text-sm mt-2 leading-relaxed">We're switching on secure payments with our payment partner. Check back shortly — the war starts at zero, and the first fans in lead the board.</p>
+        <button id="done-btn" class="fire-btn tap-active w-full rounded-md py-4 mt-6 font-display uppercase text-lg">Got it</button>
+      </div>
+    `);
+  }
+
+  function failedStepHTML() {
+    const canRetry = !!flow.actor && !!flow.amount;
+    return shell(`
+      <div class="p-6 pb-8 text-center">
+        <div class="flex justify-end mb-1">${closeBtnHTML()}</div>
+        <p class="font-display uppercase text-2xl">Payment not completed</p>
+        <p class="text-white/55 text-sm mt-2">No money was taken. If it was deducted, it's refunded automatically by your bank.</p>
+        ${
+          canRetry
+            ? `<button id="retry-btn" class="fire-btn tap-active w-full rounded-md py-4 mt-6 font-display uppercase text-lg">Try again</button>`
+            : ""
+        }
+        <button id="done-btn" class="chip-outline tap-active w-full rounded-md py-3 mt-3 font-display uppercase text-sm">Close</button>
+      </div>
+    `);
+  }
+
+  function processingStepHTML() {
+    return shell(`
+      <div class="p-6 pb-8 text-center">
+        <div class="flex justify-end mb-1">${closeBtnHTML()}</div>
+        <p class="font-display uppercase text-2xl">Payment processing</p>
+        <p class="text-white/55 text-sm mt-2">Your bank is taking a little longer. As soon as it confirms, your support lands on the leaderboard automatically — no need to pay again.</p>
+        <button id="done-btn" class="fire-btn tap-active w-full rounded-md py-4 mt-6 font-display uppercase text-lg">Got it</button>
       </div>
     `);
   }
@@ -243,23 +458,46 @@ const SupportFlow = (function () {
 
   function render() {
     if (!flow.open) return;
-    root().innerHTML =
-      flow.step === "amount" ? amountStepHTML() : flow.step === "name" ? nameStepHTML() : successStepHTML();
+    const views = {
+      amount: amountStepHTML,
+      details: detailsStepHTML,
+      paying: () =>
+        busyStepHTML(
+          "Opening secure checkout",
+          flow.slow
+            ? "Our payment partner is taking a little longer than usual — still working, don't close this page."
+            : "Hold tight — don't close this page."
+        ),
+      verifying: () => busyStepHTML("Confirming your payment", "Checking with the bank. This takes a few seconds."),
+      soon: soonStepHTML,
+      failed: failedStepHTML,
+      processing: processingStepHTML,
+      success: successStepHTML,
+    };
+    root().innerHTML = views[flow.step]();
     wireStep();
   }
+
+  // ---------- wiring ----------
 
   function wireStep() {
     const backdrop = document.getElementById("sheet-backdrop");
     if (backdrop) {
       backdrop.addEventListener("click", (e) => {
-        if (e.target.id === "sheet-backdrop") close();
+        if (e.target.id === "sheet-backdrop" && !BUSY_STEPS.includes(flow.step)) close();
       });
     }
     const closeBtn = document.getElementById("modal-close");
     if (closeBtn) closeBtn.addEventListener("click", close);
+    const doneBtn = document.getElementById("done-btn");
+    if (doneBtn && flow.step !== "success") doneBtn.addEventListener("click", close);
 
     if (flow.step === "amount") wireAmountStep();
-    if (flow.step === "name") wireNameStep();
+    if (flow.step === "details") wireDetailsStep();
+    if (flow.step === "failed") {
+      const retry = document.getElementById("retry-btn");
+      if (retry) retry.addEventListener("click", () => goTo("details"));
+    }
     if (flow.step === "success") wireSuccessStep();
   }
 
@@ -269,6 +507,7 @@ const SupportFlow = (function () {
     const customBtn = document.getElementById("custom-amount-btn");
     const customWrap = document.getElementById("custom-amount-wrap");
     const customInput = document.getElementById("custom-amount-input");
+    const hint = document.getElementById("custom-amount-hint");
 
     function enableContinue(amount) {
       const valid = cleanAmount(amount) !== null;
@@ -277,7 +516,7 @@ const SupportFlow = (function () {
       continueBtn.classList.toggle("pointer-events-none", !valid);
     }
 
-    // Coming back from the name step: restore the previous choice instead of a blank form.
+    // Coming back from the details step: restore the previous choice instead of a blank form.
     if (flow.customMode) {
       customBtn.classList.add("active");
       if (flow.amount) customInput.value = flow.amount;
@@ -308,7 +547,6 @@ const SupportFlow = (function () {
       enableContinue(flow.amount);
     });
 
-    const hint = document.getElementById("custom-amount-hint");
     customInput.addEventListener("input", () => {
       flow.amount = cleanAmount(customInput.value);
       const bad = customInput.value !== "" && flow.amount === null;
@@ -316,49 +554,65 @@ const SupportFlow = (function () {
       hint.classList.toggle("text-white/35", !bad);
       enableContinue(flow.amount);
     });
-    customInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" && flow.amount) goToName(flow.amount);
-    });
 
-    continueBtn.addEventListener("click", () => {
+    function next() {
       const amount = cleanAmount(flow.amount);
-      if (amount) goToName(amount);
+      if (!amount) return;
+      flow.amount = amount;
+      flow.error = null;
+      goTo("details");
+    }
+    customInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") next();
     });
+    continueBtn.addEventListener("click", next);
   }
 
-  function wireNameStep() {
+  function wireDetailsStep() {
     const backBtn = document.getElementById("modal-back");
-    const input = document.getElementById("supporter-name-input");
-    const submitBtn = document.getElementById("name-submit");
+    const nameInput = document.getElementById("supporter-name-input");
+    const phoneInput = document.getElementById("supporter-phone-input");
+    const payBtn = document.getElementById("pay-btn");
 
-    backBtn.addEventListener("click", () => {
-      flow.supporterName = input.value;
-      flow.step = "amount";
-      render();
-    });
-
-    function toggleSubmit() {
-      const valid = input.value.trim().length > 0;
-      submitBtn.disabled = !valid;
-      submitBtn.classList.toggle("opacity-40", !valid);
-      submitBtn.classList.toggle("pointer-events-none", !valid);
+    function valid() {
+      return nameInput.value.trim().length > 0 && normalizePhone(phoneInput.value) !== null;
+    }
+    function refresh() {
+      flow.supporterName = nameInput.value;
+      flow.phone = phoneInput.value;
+      const ok = valid();
+      payBtn.disabled = !ok;
+      payBtn.classList.toggle("opacity-40", !ok);
+      payBtn.classList.toggle("pointer-events-none", !ok);
+    }
+    function pay() {
+      if (!valid()) return;
+      flow.supporterName = nameInput.value.trim();
+      flow.phone = normalizePhone(phoneInput.value);
+      startPayment();
     }
 
-    input.addEventListener("input", toggleSubmit);
-    toggleSubmit();
-    input.focus();
-    input.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" && input.value.trim()) submit(input.value.trim());
+    backBtn.addEventListener("click", () => {
+      refresh();
+      flow.error = null;
+      goTo("amount");
     });
-    submitBtn.addEventListener("click", () => {
-      if (input.value.trim()) submit(input.value.trim());
+    [nameInput, phoneInput].forEach((el) => {
+      el.addEventListener("input", refresh);
+      el.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") pay();
+      });
     });
+    payBtn.addEventListener("click", pay);
+
+    refresh();
+    (nameInput.value.trim() ? phoneInput : nameInput).focus();
   }
 
   function wireSuccessStep() {
     const { actor, result } = flow;
     const level = result.level;
-    const token = result.contribution.token;
+    const token = result.token;
     const cardData = {
       actorTitle: actorTitle(actor),
       actorName: actor.name,
@@ -441,5 +695,5 @@ const SupportFlow = (function () {
     setTimeout(() => el.remove(), 2200);
   }
 
-  return { open, close };
+  return { open, resume, close };
 })();
