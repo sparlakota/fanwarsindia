@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Page not found — FanWarsIndia</title>
+<meta name="robots" content="noindex" />
+<meta name="theme-color" content="#050505" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = { theme: { extend: {
+    colors: { fwblack: "#050505", fwwhite: "#FFFFFF", fwred: "#FF1A1A", fwdeepred: "#B00000" },
+    fontFamily: { display: ["Anton", "Arial Black", "sans-serif"], name: ["Oswald", "Anton", "sans-serif"], body: ["Barlow", "Inter", "sans-serif"] },
+  } } };
+</script>
+<!-- Absolute paths: this page is served at whatever unknown URL was requested. -->
+<link rel="stylesheet" href="/css/styles.css?v=17" />
+<link rel="icon" href="/assets/logo/crown-mark.png" type="image/png" />
+</head>
+<body class="font-body bg-fwblack text-fwwhite min-h-screen flex flex-col">
+<div class="grain-overlay"></div>
+<main class="flex-1 flex flex-col items-center justify-center text-center px-6 py-16">
+  <img src="/assets/logo/fanwarsindia-logo.png" alt="FanWarsIndia" class="w-44 h-auto mb-10" />
+  <p class="font-display text-fwred text-7xl sm:text-8xl leading-none">404</p>
+  <h1 class="font-display uppercase text-4xl sm:text-5xl leading-tight mt-4">This page left<br />the theatre.</h1>
+  <p class="text-white/60 mt-4 max-w-sm">The link you followed doesn't exist, or it moved. The leaderboard is still going strong.</p>
+  <a href="/" class="fire-btn tap-active mt-8 inline-block rounded-sm font-display uppercase text-sm px-8 py-3.5">Back to the leaderboard</a>
+</main>
+</body>
+</html>

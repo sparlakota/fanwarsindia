@@ -75,26 +75,30 @@ function renderToggle(mode) {
 }
 
 function rankNumeral(rank) {
+  if (!rank) return "—"; // unranked
   return rank < 10 ? `0${rank}` : `${rank}`;
 }
 
-function actorCardHTML(actor, rank, mode) {
-  const isTop3 = rank <= 3;
+function actorCardHTML(actor, position, mode) {
+  // A star nobody has backed yet is unranked ("—", no highlight): 13 zeros numbered 01–13 read as fake standings.
+  const hasScore = (mode === "army" ? actor.fan_army : actor.fan_power) > 0;
+  const rank = hasScore ? position : 0;
+  const isTop3 = hasScore && rank <= 3;
   const metricValue =
     mode === "army"
       ? `${formatCount(actor.fan_army)} ${actor.fan_army === 1 ? "fan" : "fans"}`
       : formatRupees(actor.fan_power);
   const secondaryLabel =
     mode === "army"
-      ? `${formatRupees(actor.fan_power)} fan power`
-      : `${formatCount(actor.fan_army)} fan army`;
+      ? `Fan Army · ${formatRupees(actor.fan_power)} fan power`
+      : `Fan Power · ${formatCount(actor.fan_army)} ${actor.fan_army === 1 ? "fan" : "fans"}`;
 
   if (isTop3) {
     return `
     <article
       class="actor-card card-grain relative rounded-lg border ${rankBadgeClasses(rank)} ${rankBackgroundClasses(rank)} p-4 flex flex-col gap-4 rise-in"
       data-actor-id="${actor.id}"
-      style="animation-delay:${rank * 60}ms"
+      style="animation-delay:${position * 60}ms"
     >
       <div class="flex items-center gap-3">
         <div class="shrink-0 w-12 text-center leading-none">
@@ -131,10 +135,10 @@ function actorCardHTML(actor, rank, mode) {
   <article
     class="actor-card card-grain relative rounded-lg border ${rankBadgeClasses(rank)} ${rankBackgroundClasses(rank)} p-3 flex flex-col gap-3 rise-in"
     data-actor-id="${actor.id}"
-    style="animation-delay:${Math.min(rank, 10) * 40}ms"
+    style="animation-delay:${Math.min(position, 10) * 40}ms"
   >
     <div class="flex items-center gap-3">
-      <div class="font-display shrink-0 text-fwred/80 text-base w-7 text-center leading-none">${rankNumeral(rank)}</div>
+      <div class="font-display shrink-0 ${hasScore ? "text-fwred/80" : "text-white/30"} text-base w-7 text-center leading-none">${rankNumeral(rank)}</div>
 
       <img
         src="${actor.image}"

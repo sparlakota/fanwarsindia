@@ -134,3 +134,10 @@ Open (not code): Cashfree checkout brand name ("Business Name"); no moderation f
 - No automated tests of any kind (matches the "no build tooling" constraint — would need at least a test runner, which doesn't exist here yet).
 - Mobile/LAN testing of the dev server was never completed (see above).
 - `scripts/*.ps1` / `scripts/*.sh` are one-off asset-generation tools, not part of the served app — fine to leave, but don't assume they run automatically or are part of any pipeline.
+
+## 2026-09-29 — Audit fixes
+- Unranked state: a star with nothing backed yet (0 in the active tab's metric) shows "—", no crown/glow, compact card. Ranks only appear once there is a score.
+- Sub-label under the big number now names the active tab: Power tab "Fan Power · N fans", Army tab "Fan Army · ₹X fan power".
+- Added branded `404.html` (Vercel serves it for unknown routes), `robots.txt`, `sitemap.xml`. Cache-bust bumped to `?v=17`.
+- Audit "3 images missing alt" = the 3 intentional `alt=""` decorative images (header crown, hero backdrop, #1 crown). No `<img>` lacks the attribute.
+- NOT done: replacing the Tailwind CDN with a compiled CSS build — needs a build tool (no Node on this machine) and the user's OK (see CLAUDE.md constraint 4).
