@@ -25,7 +25,7 @@ Deno.serve(async (req) => {
   const query = (status: string, hours: number) =>
     supabase
       .from("contributions")
-      .select("cashfree_order_id")
+      .select("order_ref")
       .eq("status", status)
       .not("dodo_session_id", "is", null)
       .gte("created_at", new Date(Date.now() - hours * 3600_000).toISOString())
@@ -47,13 +47,13 @@ Deno.serve(async (req) => {
   for (const r of rows) {
     result.checked++;
     try {
-      const after = await syncOrder(supabase, dodo, r.cashfree_order_id);
+      const after = await syncOrder(supabase, dodo, r.order_ref);
       if (after?.status === "success") result.success++;
       else if (after?.status === "failed") result.failed++;
       else result.still_pending++;
     } catch (e) {
       result.errors++;
-      console.error("reconcile failed", r.cashfree_order_id, e);
+      console.error("reconcile failed", r.order_ref, e);
     }
   }
   if (result.success || result.errors) console.log("reconcile", JSON.stringify(result));

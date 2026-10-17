@@ -1,5 +1,5 @@
 // GET ?order_id=... -> the contribution's status plus everything the celebration screen needs.
-// Re-checks with Cashfree when still pending, so a slow or missed webhook never strands a fan.
+// Re-checks with Dodo when still pending, so a slow or missed webhook never strands a fan.
 import { corsHeaders, db, dodoConfig, json, syncOrder } from "../_shared/common.ts";
 
 type BoardRow = { id: number; sort_order: number; fan_power: number };
@@ -23,7 +23,7 @@ Deno.serve(async (req) => {
   if (dodo) {
     row = await syncOrder(supabase, dodo, orderId);
   } else {
-    const { data } = await supabase.from("contributions").select("*").eq("cashfree_order_id", orderId).maybeSingle();
+    const { data } = await supabase.from("contributions").select("*").eq("order_ref", orderId).maybeSingle();
     row = data;
   }
   if (!row) return json(req, { error: "not_found" }, 404);

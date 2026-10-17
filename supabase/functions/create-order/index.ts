@@ -106,7 +106,7 @@ Deno.serve(async (req) => {
     supporter_name: name,
     supporter_phone: phone,
     amount,
-    cashfree_order_id: orderId, // column name predates Dodo: it holds OUR order reference
+    order_ref: orderId, // our own order reference (fw_…), also sent to Dodo as metadata
     card_token: cardToken,
     client_ip_hash: clientIpHash,
     is_test: dodo.mode === "test_mode", // hidden from the live site's leaderboards
@@ -136,17 +136,17 @@ Deno.serve(async (req) => {
 
   if (!dRes.ok) {
     console.error("dodo create checkout failed", dRes.status, await dRes.text());
-    await supabase.from("contributions").update({ status: "failed" }).eq("cashfree_order_id", orderId);
+    await supabase.from("contributions").update({ status: "failed" }).eq("order_ref", orderId);
     return json(req, { error: "gateway_error" }, 502);
   }
 
   const session = await dRes.json();
   if (!session.session_id || !session.checkout_url) {
     console.error("dodo checkout response missing fields", JSON.stringify(session));
-    await supabase.from("contributions").update({ status: "failed" }).eq("cashfree_order_id", orderId);
+    await supabase.from("contributions").update({ status: "failed" }).eq("order_ref", orderId);
     return json(req, { error: "gateway_error" }, 502);
   }
-  await supabase.from("contributions").update({ dodo_session_id: session.session_id }).eq("cashfree_order_id", orderId);
+  await supabase.from("contributions").update({ dodo_session_id: session.session_id }).eq("order_ref", orderId);
 
   return json(req, {
     order_id: orderId,

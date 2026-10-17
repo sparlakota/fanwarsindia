@@ -74,10 +74,10 @@ Deno.serve(async (req) => {
       if (!orderId?.startsWith("fw_") && payment.checkout_session_id) {
         const { data: found } = await supabase
           .from("contributions")
-          .select("cashfree_order_id")
+          .select("order_ref")
           .eq("dodo_session_id", payment.checkout_session_id)
           .maybeSingle();
-        orderId = found?.cashfree_order_id;
+        orderId = found?.order_ref;
       }
     }
     if (!orderId || !orderId.startsWith("fw_")) return new Response("ok", { status: 200 });

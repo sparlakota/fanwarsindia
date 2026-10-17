@@ -96,7 +96,7 @@ export async function syncOrder(supabase: SupabaseClient, dodo: DodoConfig, orde
   const { data: row, error } = await supabase
     .from("contributions")
     .select("*")
-    .eq("cashfree_order_id", orderId) // column name predates Dodo: it holds OUR order reference (fw_…)
+    .eq("order_ref", orderId) // our own order reference (fw_…)
     .maybeSingle();
   if (error) throw error;
   if (!row || row.status === "success" || !row.dodo_session_id) return row;
