@@ -24,7 +24,7 @@ There's no `npm start`. Use the PowerShell static file server:
 powershell -File scripts/serve.ps1
 ```
 
-Serves the project root on `http://localhost:8791` (or via the `fanwarsindia-static` launch config in `.claude/launch.json`, which the Browser pane's `preview_start` tool picks up automatically). The server sets `Cache-Control: no-cache, no-store, must-revalidate` on every response — do not remove this, it caused a real multi-turn debugging session before (see decisions.md). All local script/CSS references in `index.html` also carry a `?v=17` cache-busting query string; **bump that version number** if you ever edit a JS/CSS file and need to guarantee a stale-cache-proof reload for the user.
+Serves the project root on `http://localhost:8791` (or via the `fanwarsindia-static` launch config in `.claude/launch.json`, which the Browser pane's `preview_start` tool picks up automatically). The server sets `Cache-Control: no-cache, no-store, must-revalidate` on every response — do not remove this, it caused a real multi-turn debugging session before (see decisions.md). All local script/CSS references in `index.html` also carry a `?v=19` cache-busting query string; **bump that version number** if you ever edit a JS/CSS file and need to guarantee a stale-cache-proof reload for the user.
 
 The server binds to `127.0.0.1` only. It is **not** reachable from other devices (phone, etc.) — that was evaluated and intentionally not set up because the laptop is sometimes on school wifi and opening the port safely would need admin-elevated `netsh` commands the user chose to skip for now. See decisions.md if this comes up again.
 

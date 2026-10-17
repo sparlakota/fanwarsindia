@@ -151,25 +151,51 @@ const SupportFlow = (function () {
     return getDodo(order.environment).then(
       (sdk) =>
         new Promise((resolve) => {
+          let pollTimer = null;
+          const done = (result) => {
+            clearInterval(pollTimer);
+            onCheckoutEvent = null;
+            resolve(result);
+          };
+
           onCheckoutEvent = (event) => {
             const type = event && event.event_type;
             const data = (event && event.data) || {};
+            console.debug("Dodo checkout event", type, data);
             if (type === "checkout.status") {
               const outcome = String(data.status || data.payment_status || "").toLowerCase();
-              if (outcome === "succeeded" || outcome === "success") resolve({ paid: true });
-              else if (outcome === "failed" || outcome === "cancelled") resolve({ failed: true });
+              if (outcome === "succeeded" || outcome === "success") done({ paid: true });
+              else if (outcome === "failed" || outcome === "cancelled") done({ failed: true });
             } else if (type === "checkout.redirect_requested") {
               const url = data.url || data.redirect_url || data.redirectUrl;
               if (typeof url === "string" && url.startsWith("https://")) {
-                resolve({ redirect: true });
+                done({ redirect: true });
                 window.location.assign(url);
               }
             } else if (type === "checkout.closed") {
-              resolve({ closed: true });
+              done({ closed: true });
             } else if (type === "checkout.error") {
               console.warn("Dodo checkout error", data);
             }
           };
+
+          // The popup does not always announce the outcome (a UPI payment can leave it on "Processing"
+          // even after Dodo confirmed it), so also ask OUR server, which asks Dodo. Only success ends
+          // the wait here: after a failed attempt the fan may retry inside the same popup.
+          let checking = false;
+          pollTimer = setInterval(async () => {
+            if (checking) return;
+            checking = true;
+            try {
+              const s = await Store.getOrderStatus(order.order_id);
+              if (s && s.status === "success") done({ paid: true });
+            } catch (e) {
+              /* keep waiting */
+            } finally {
+              checking = false;
+            }
+          }, 4000);
+
           sdk.Checkout.open({
             checkoutUrl: order.checkout_url,
             options: { manualRedirect: true, showSecurityBadge: true },
