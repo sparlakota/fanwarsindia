@@ -160,7 +160,7 @@ const SupportFlow = (function () {
               else if (outcome === "failed" || outcome === "cancelled") resolve({ failed: true });
             } else if (type === "checkout.redirect_requested") {
               const url = data.url || data.redirect_url || data.redirectUrl;
-              if (typeof url === "string" && /^https:///.test(url)) {
+              if (typeof url === "string" && url.startsWith("https://")) {
                 resolve({ redirect: true });
                 window.location.assign(url);
               }

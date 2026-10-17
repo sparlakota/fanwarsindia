@@ -6,9 +6,9 @@ Read this first. For the "why" behind non-obvious choices, see [decisions.md](de
 
 A Telugu-cinema fandom leaderboard site. Fans "support" their favorite actor with a rupee amount; it moves two leaderboards (Fan Power = cumulative ₹, Fan Army = unique supporter count). Brand: "pure cult, pure mass, pure fan" — raw, cinematic, tribal, explicitly **not** SaaS/corporate/casino/AI-generic. Colors: near-black `#050505`, white, fire red `#FF1A1A`, deep red `#B00000`.
 
-Static frontend (Vercel) + **Supabase backend** (Postgres + 4 Edge Functions) + **Cashfree** payments. As of 2026-09-28 the **whole site is live on fanwarsindia.com except payments**: Cashfree runs in sandbox (test) mode, and the live domain shows "Support opens very soon" instead of checkout. Payments open on launch day by following `GO-LIVE.md` (live keys + `CASHFREE_ENV=production` + flip `paymentsOpenOnProduction` in `js/config.js`).
+Static frontend (Vercel) + **Supabase backend** (Postgres + 4 Edge Functions) + **Dodo Payments** (merchant of record; replaced Cashfree, which declined the account, on 2026-10-17). The **whole site is live on fanwarsindia.com except payments**: Dodo runs in test mode on the `dodo` branch/preview, and the live domain shows "Support opens very soon" instead of checkout. Payments open on launch day by following `GO-LIVE.md` (live product + keys + `DODO_ENV=live_mode` + flip `paymentsOpenOnProduction` in `js/config.js`).
 
-**Test vs live data**: every contribution created while `CASHFREE_ENV=sandbox` has `is_test = true`. The `public_*` functions take `p_include_test` (default false); the live domain never shows test rows (`FW_CONFIG.showTestData` is false there), while preview links and localhost show them for testing. `create-order` refuses sandbox payments whose Origin is the live domain.
+**Test vs live data**: every contribution created while `DODO_ENV=test_mode` has `is_test = true`. The `public_*` functions take `p_include_test` (default false); the live domain never shows test rows (`FW_CONFIG.showTestData` is false there), while preview links and localhost show them for testing. `create-order` refuses test-mode payments whose Origin is the live domain.
 
 ## Stack — deliberately no build tooling
 
@@ -47,15 +47,15 @@ js/
   store.js                 Store — loads leaderboard/activity/top fans from Supabase; createOrder/getOrderStatus
   render.js                Leaderboard/activity DOM rendering, rank/level badge helpers
   fan-card.js               FanCard.html()/toBlob()/shareBlob()/saveBlob() — the shareable card (on-screen + 1080x1920 PNG)
-  support-flow.js           SupportFlow — amount → name+mobile → Cashfree checkout → verify → celebration
+  support-flow.js           SupportFlow — amount → name+mobile → Dodo overlay checkout → verify → celebration
   main.js                   Bootstraps rendering, loads data, refreshes every 60s, resumes ?order_id= returns
 supabase/functions/       Edge Function source (deployed via the Supabase connector, not auto-deployed from git)
-  _shared/common.ts         CORS, Cashfree config/headers, syncOrder() — the only code that marks a payment successful
-  create-order/             POST: validate, insert pending contribution, create Cashfree order
-  order-status/             GET: syncs with Cashfree if pending, returns celebration data
-  cashfree-webhook/         POST from Cashfree: verifies signature, then syncOrder()
-  reconcile-pending/        POST from pg_cron every 10 min: re-checks stuck pending orders with Cashfree
-GO-LIVE.md                Step-by-step checklist for the day live Cashfree keys arrive
+  _shared/common.ts         CORS, Dodo config/headers, syncOrder() — the only code that marks a payment successful
+  create-order/             POST: validate, insert pending contribution, create Dodo checkout session
+  order-status/             GET: syncs with Dodo if pending, returns celebration data
+  dodo-webhook/             POST from Dodo (Standard Webhooks): verifies signature, then syncOrder()
+  reconcile-pending/        POST from pg_cron every 10 min: re-checks stuck pending orders with Dodo
+GO-LIVE.md                Step-by-step checklist for going live on Dodo
 assets/
   actors/*.jpg              Real licensed actor photos (20), filenames = actor slug
   logo/                    crown-mark.png, wordmark-mark.png, fanwarsindia-logo.png — the REAL brand logo (see decisions.md)
@@ -80,7 +80,7 @@ Live at **https://www.fanwarsindia.com** (apex redirects to www). Vercel project
 
 ## Backend & payments
 
-Supabase project `fanwarsindia` (id `cntrkcpwetjjifubccha`, ap-south-1), managed through the Supabase connector (migrations, Edge Function deploys, SQL). Cashfree is the payment gateway.
+Supabase project `fanwarsindia` (id `cntrkcpwetjjifubccha`, ap-south-1), managed through the Supabase connector (migrations, Edge Function deploys, SQL). Dodo Payments is the payment gateway (merchant of record).
 
 **Tables** (RLS on both):
 - `actors` — roster, public read. Must stay in sync with `js/actors.js` ids (the frontend takes display data from `ACTORS`, numbers from the server).
@@ -92,15 +92,15 @@ Supabase project `fanwarsindia` (id `cntrkcpwetjjifubccha`, ap-south-1), managed
 
 **Safety net (`reconcile-pending`)**: pg_cron job `reconcile-pending-payments` runs every 10 min and POSTs (via pg_net) to the `reconcile-pending` Edge Function with header `x-reconcile-token` = Vault secret `reconcile_token`; the function checks it with `reconcile_token_ok()` (service_role only) and runs `syncOrder()` on pending orders 2 min–48 h old. Orders are created with a 1 h `order_expiry_time`, so abandoned checkouts become EXPIRED → `failed`. Verified 2026-09-28 by forcing a paid order back to pending: the job recovered it. **Go-live steps: see `GO-LIVE.md`.**
 
-**Abuse limits in `create-order`**: max 5 pending orders per phone and 30 unpaid orders per hashed IP, per 10 minutes (IP limit is generous on purpose — Indian carriers share IPs via CGNAT). Cashfree gets a plain-ASCII copy of the fan's name (or none) because emoji/other scripts can fail order creation; the real name is stored for display.
+**Abuse limits in `create-order`**: max 5 pending orders per phone and 30 unpaid orders per hashed IP, per 10 minutes (IP limit is generous on purpose — Indian carriers share IPs via CGNAT). 
 
 **Public read functions** (SECURITY DEFINER, pinned search_path; the advisor WARNs about anon access are intentional): `public_leaderboard()` (fan_power = sum of success, fan_army = distinct phones), `public_activity()` (last 50 successes, ordered by confirmation time), `public_top_fans(p_limit)` (one row per phone; returns only `phone_last4`, never the number or a hash of it).
 
 **Identity**: a fan = a mobile number (user's decision, 2026-09-24: no OTP, to keep checkout frictionless). Names are display-only; Top Fans shows `Name ••1234`.
 
-**Payment flow**: `create-order` (pending row + Cashfree order) → Cashfree JS SDK v3 checkout in a modal → `order-status` polled every 2s → success screen. `syncOrder()` in `_shared/common.ts` is the **only** place a row becomes `success`: it asks Cashfree's Get Order API server-to-server and checks `order_status === "PAID"` and the amount. The webhook only triggers `syncOrder()`; the browser can never credit anything. Redirect-based bank/UPI flows return to `/?order_id=fw_…`, which `main.js` resumes.
+**Payment flow**: `create-order` (pending row + Dodo checkout session on a pay-what-you-want INR product, amount in paise, our order ref in session metadata) → Dodo overlay checkout (`dodopayments-checkout` from jsDelivr, `manualRedirect`) → `order-status` polled every 2s → success screen. `syncOrder()` in `_shared/common.ts` is the **only** place a row becomes `success`: it asks Dodo server-to-server (GET /checkouts/{id} → payment_id → GET /payments/{id}) and requires `status === succeeded`, `currency === INR` and `total_amount === amount*100`. The webhook (`dodo-webhook`, Standard Webhooks signature) only triggers `syncOrder()`; the browser can never credit anything. A failed row can still become `success` if Dodo later reports the payment as succeeded (checkout links live 24 h). The column `contributions.cashfree_order_id` is a legacy name: it now holds OUR order reference (`fw_…`); `dodo_session_id` / `dodo_payment_id` hold Dodo ids. Minimum amount is ₹49 (the Dodo product minimum) — keep `MIN_AMOUNT` in `create-order` and `js/support-flow.js` in sync with the product.
 
-**Secrets** (Supabase → Edge Functions → Secrets): `CASHFREE_APP_ID`, `CASHFREE_SECRET_KEY`, `CASHFREE_ENV` (`sandbox` | `production`), optional `CASHFREE_API_VERSION` (default `2023-08-01`). `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY` are provided automatically.
+**Secrets** (Supabase → Edge Functions → Secrets): `DODO_API_KEY`, `DODO_PRODUCT_ID`, `DODO_WEBHOOK_KEY` (`whsec_…`), `DODO_ENV` (`test_mode` | `live_mode`). `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY` are provided automatically. The Dodo connector (plugin `dodopayments`) can read/create products and webhooks in whichever mode its API key is for — keep it on test mode until go-live.
 
 **Deploying function changes**: edit `supabase/functions/…`, then redeploy that function with the Supabase connector's `deploy_edge_function`, passing `index.ts` plus `../_shared/common.ts`. `create-order`/`order-status` use `verify_jwt: true` (the site sends the anon JWT); `cashfree-webhook` uses `verify_jwt: false` (Cashfree can't send a JWT; the HMAC signature is its auth). Git pushes do **not** deploy functions.
 
@@ -131,5 +131,5 @@ The old browser-only store (localStorage key `fanwarsindia_demo_state_v1`) is go
 2. **No AI-generated actor images either** — user explicitly declined this route too.
 3. Don't expose the local dev server beyond `127.0.0.1` without re-confirming the network safety context with the user (see decisions.md — school wifi consideration).
 4. Don't add a build step / npm / framework without checking first (see Stack section above).
-5. Never put the Cashfree secret key (or the Supabase service-role key) in the repo, in `js/`, or in chat. Secrets live only in Supabase's Edge Function secrets. Never make `contributions` readable to the browser — it holds phone numbers.
-6. Don't switch Cashfree to `production` (live money) without the user explicitly saying so.
+5. Never put the Dodo API key / webhook secret (or the Supabase service-role key) in the repo, in `js/`, or in chat. Secrets live only in Supabase's Edge Function secrets. Never make `contributions` readable to the browser — it holds phone numbers. Never `git add -A` blindly: `Fan Wars India_Images/` (raw source images) is untracked and ignored — stage files by name.
+6. Don't switch Dodo to `live_mode` (live money) without the user explicitly saying so. Merge the `dodo` branch with a **squash** merge only (its history contains a raw image folder that was later removed).

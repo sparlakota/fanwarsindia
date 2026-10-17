@@ -141,3 +141,11 @@ Open (not code): Cashfree checkout brand name ("Business Name"); no moderation f
 - Added branded `404.html` (Vercel serves it for unknown routes), `robots.txt`, `sitemap.xml`. Cache-bust bumped to `?v=17`.
 - Audit "3 images missing alt" = the 3 intentional `alt=""` decorative images (header crown, hero backdrop, #1 crown). No `<img>` lacks the attribute.
 - NOT done: replacing the Tailwind CDN with a compiled CSS build — needs a build tool (no Node on this machine) and the user's OK (see CLAUDE.md constraint 4).
+
+## 2026-10-17 — Cashfree declined; moved to Dodo Payments (test mode)
+- Cashfree did not approve the account. Dodo Payments approved (category "Others"; fan-support payments, instant digital delivery).
+- Test product `pdt_0NpvOH0fLyksv8gDHl8nl` "Fan Wars_Test": one-time, pay-what-you-want, INR, minimum ₹49. Rename it before go-live.
+- Built on branch `dodo` (not merged): new create-order / order-status / dodo-webhook / reconcile-pending, Dodo overlay checkout in support-flow.js, ₹49 minimum, policy pages name Dodo. Migration `add_dodo_columns_to_contributions`.
+- Verified: webhook registered (4 payment events, signature enforced), create-order makes real Dodo test checkouts (₹49, INR, order ref in metadata), live origin refused, below-minimum refused, closing the checkout shows "Payment not completed". NOT yet verified: a completed test payment + webhook (the automated browser could not finish the card step) — owner to test on the preview link.
+- Dodo checkout asks the fan for name, email and zip; 15-minute checkout timer.
+- Mistakes fixed: placeholder common.ts briefly deployed to dodo-webhook (redeployed); a regex lost its escaping in support-flow.js (caught locally); raw images folder committed to `dodo` then removed in a follow-up commit (history still has it → squash-merge only).
