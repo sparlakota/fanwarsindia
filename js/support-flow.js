@@ -1,14 +1,14 @@
 /**
  * FanWarsIndia — Support flow sheet.
- * amount -> details (name + mobile) -> paying (Cashfree checkout) -> verifying -> success
+ * amount -> details (name + mobile) -> paying (Dodo checkout) -> verifying -> success
  *                                                                   \-> failed | processing
- * Nothing is credited in the browser: the server confirms with Cashfree, and "success" is only
+ * Nothing is credited in the browser: the server confirms with Dodo, and "success" is only
  * shown once order-status says so.
  */
 
 const SupportFlow = (function () {
   const AMOUNT_OPTIONS = [49, 99, 199, 499, 999];
-  const MIN_AMOUNT = 1;
+  const MIN_AMOUNT = 49; // Dodo product minimum — keep in sync with create-order
   const MAX_AMOUNT = 100000;
   const BUSY_STEPS = ["paying", "verifying"];
 
@@ -78,7 +78,7 @@ const SupportFlow = (function () {
     prepareForPayment();
   }
 
-  /** Re-enter after a Cashfree redirect back to /?order_id=... */
+  /** Re-enter after a Dodo redirect back to /?order_id=... */
   function resume(orderId) {
     if (!/^fw_[a-z0-9_]{6,40}$/.test(orderId)) return;
     flow = { ...blankFlow(), open: true, orderId };
@@ -99,30 +99,83 @@ const SupportFlow = (function () {
 
   // ---------- payment ----------
 
-  let cashfreeScript = null;
-  function loadCashfreeScript() {
-    if (!cashfreeScript) {
-      cashfreeScript = new Promise((resolve, reject) => {
+  let dodoScript = null;
+  function loadDodoScript() {
+    if (!dodoScript) {
+      dodoScript = new Promise((resolve, reject) => {
         const s = document.createElement("script");
-        s.src = "https://sdk.cashfree.com/js/v3/cashfree.js";
+        s.src = "https://cdn.jsdelivr.net/npm/dodopayments-checkout@latest/dist/index.js";
         s.onload = resolve;
         s.onerror = () => {
-          cashfreeScript = null;
+          dodoScript = null;
           reject(new Error("checkout_load"));
         };
         document.head.appendChild(s);
       });
     }
-    return cashfreeScript;
-  }
-  function loadCashfree(mode) {
-    return loadCashfreeScript().then(() => window.Cashfree({ mode }));
+    return dodoScript;
   }
 
-  /** Called when the sheet opens: fetch Cashfree's checkout code and wake our server in the background. */
+  // Dodo's SDK is initialised once; each payment plugs its own listener into this slot.
+  let dodoReady = null;
+  let onCheckoutEvent = null;
+  function getDodo(environment) {
+    return loadDodoScript().then(() => {
+      const sdk = window.DodoPaymentsCheckout && window.DodoPaymentsCheckout.DodoPayments;
+      if (!sdk) throw new Error("checkout_load");
+      if (!dodoReady) {
+        sdk.Initialize({
+          mode: environment === "live_mode" ? "live" : "test",
+          displayType: "overlay",
+          onEvent: (event) => onCheckoutEvent && onCheckoutEvent(event),
+        });
+        dodoReady = true;
+      }
+      return sdk;
+    });
+  }
+
+  /** Called when the sheet opens: fetch Dodo's checkout code and wake our server in the background. */
   function prepareForPayment() {
-    loadCashfreeScript().catch(() => {});
+    loadDodoScript().catch(() => {});
     Store.warmPaymentServer();
+  }
+
+  /**
+   * Open Dodo's checkout over the page. Resolves { closed: true } when the fan closes it, or
+   * { paid: true } / { failed: true } once Dodo reports an outcome (the server still confirms it).
+   * manualRedirect keeps the fan on our page; if a bank/UPI step has to leave the page, we follow
+   * Dodo's redirect and pick the order up again via ?order_id= on return.
+   */
+  function openCheckout(order) {
+    return getDodo(order.environment).then(
+      (sdk) =>
+        new Promise((resolve) => {
+          onCheckoutEvent = (event) => {
+            const type = event && event.event_type;
+            const data = (event && event.data) || {};
+            if (type === "checkout.status") {
+              const outcome = String(data.status || data.payment_status || "").toLowerCase();
+              if (outcome === "succeeded" || outcome === "success") resolve({ paid: true });
+              else if (outcome === "failed" || outcome === "cancelled") resolve({ failed: true });
+            } else if (type === "checkout.redirect_requested") {
+              const url = data.url || data.redirect_url || data.redirectUrl;
+              if (typeof url === "string" && /^https:///.test(url)) {
+                resolve({ redirect: true });
+                window.location.assign(url);
+              }
+            } else if (type === "checkout.closed") {
+              resolve({ closed: true });
+            } else if (type === "checkout.error") {
+              console.warn("Dodo checkout error", data);
+            }
+          };
+          sdk.Checkout.open({
+            checkoutUrl: order.checkout_url,
+            options: { manualRedirect: true, showSecurityBadge: true },
+          });
+        })
+    );
   }
 
   async function startPayment() {
@@ -156,8 +209,7 @@ const SupportFlow = (function () {
 
     let result;
     try {
-      const cashfree = await loadCashfree(order.environment === "production" ? "production" : "sandbox");
-      result = await cashfree.checkout({ paymentSessionId: order.payment_session_id, redirectTarget: "_modal" });
+      result = await openCheckout(order);
     } catch (e) {
       flow.error = ERROR_MESSAGES.checkout_load;
       goTo("details");
@@ -166,11 +218,16 @@ const SupportFlow = (function () {
 
     // Some bank/UPI flows leave the page; we pick the order up again via ?order_id= on return.
     if (result && result.redirect) return;
-    await verify(order.order_id, { userClosed: !!(result && result.error) });
+    try {
+      if (window.DodoPaymentsCheckout.DodoPayments.Checkout.isOpen()) window.DodoPaymentsCheckout.DodoPayments.Checkout.close();
+    } catch (e) {
+      /* already closed */
+    }
+    await verify(order.order_id, { userClosed: !!(result && (result.closed || result.failed)) });
   }
 
   /**
-   * Poll the server until Cashfree has confirmed (or rejected) the order.
+   * Poll the server until Dodo has confirmed (or rejected) the order.
    * If the fan closed the checkout, give it a few seconds (they may have paid just before closing).
    */
   async function verify(orderId, { userClosed }) {
@@ -325,7 +382,7 @@ const SupportFlow = (function () {
           class="fire-btn tap-active w-full rounded-md py-4 font-display uppercase text-lg opacity-40 pointer-events-none flex items-center justify-center gap-2">
           <span class="w-4 h-4">${Icons.flame()}</span> Pay ${formatRupees(flow.amount)}
         </button>
-        <p class="text-[11px] text-white/35 text-center mt-3">Secure payment by Cashfree · UPI, cards, net banking</p>
+        <p class="text-[11px] text-white/35 text-center mt-3">Secure payment · UPI and cards (RuPay, Visa, Mastercard)</p>
         <p class="text-[11px] text-white/40 text-center mt-2 leading-relaxed">By paying you agree to our <a href="terms.html" target="_blank" rel="noopener" class="underline hover:text-white">Terms</a>, <a href="privacy.html" target="_blank" rel="noopener" class="underline hover:text-white">Privacy Policy</a> and <a href="refund.html" target="_blank" rel="noopener" class="underline hover:text-white">Refund Policy</a>. Contributions are voluntary, non-refundable and go to FanWarsIndia, not to the actor.</p>
       </div>
     `);

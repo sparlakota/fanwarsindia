@@ -10,7 +10,7 @@ document.addEventListener("DOMContentLoaded", () => {
   renderAll();
   Store.load();
 
-  // Coming back from a Cashfree redirect (some UPI/bank flows leave the page): ?order_id=fw_...
+  // Coming back from a Dodo checkout redirect (some UPI/bank flows leave the page): ?order_id=fw_...
   const params = new URLSearchParams(location.search);
   const returnedOrder = params.get("order_id");
   if (returnedOrder) {
