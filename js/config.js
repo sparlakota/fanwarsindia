@@ -10,7 +10,7 @@ const FW_CONFIG = (function () {
   // LAUNCH SWITCH — set to true on go-live day (see GO-LIVE.md). Until then fanwarsindia.com shows
   // "payments open very soon" (the server also refuses test-mode payments from the live domain).
   // Preview links and localhost always allow (test-mode) payments.
-  const paymentsOpenOnProduction = false;
+  const paymentsOpenOnProduction = true;
 
   return {
     supabaseUrl: "https://cntrkcpwetjjifubccha.supabase.co",
