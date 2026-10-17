@@ -1,55 +1,55 @@
-# FanWarsIndia — Go-live checklist
+# FanWarsIndia — Go-live checklist (Dodo Payments)
 
-Use this the day Cashfree activates the account. Total time: ~15 minutes.
-Owner = you (Shabareesh). Claude = the AI assistant session. Tick each box in order.
+Use this when you are ready to take real money. Owner = you (Shabareesh). Claude = the AI assistant session.
+
+Payments run on **Dodo Payments** (merchant of record). Today everything is in **test mode**: the `dodo` branch /
+preview link takes test payments; fanwarsindia.com shows "Support opens very soon".
 
 ---
 
-## A. Before switching (owner, in the Cashfree dashboard — switch it to **Live / Production** mode)
+## A. In the Dodo dashboard — switch to **Live mode**
 
-- [ ] **Account activated** — the "Product Activation Pending" banner is gone and Payment Gateway shows Active.
-- [ ] **Brand name and logo** set (Settings → Brand / Checkout customization), so checkout says *FanWarsIndia*, not "Business Name". Use `assets/logo/fanwarsindia-logo.png`.
-- [ ] **Whitelist the website domains** (Developers → Whitelisting / Domains): `https://www.fanwarsindia.com` and `https://fanwarsindia.com`. Live checkout refuses to open on un-whitelisted sites.
-- [ ] **Webhook**: Developers → Webhooks → Payment Gateway, in **Live** mode. Confirm the `NOTIFY_URL` row exists with **success payment** ticked (same as test mode). Do **not** add a second endpoint with our URL — it would double every notification.
-- [ ] **Generate live API keys** (Developers → API Keys, Live mode): an **App ID** and a **Secret Key**. Don't paste the secret into chat, email or any file.
+- [ ] **Account approved for live payments** (Dodo's go-live / business verification complete).
+- [ ] **Create the live product**: one-time, **Pay what you want**, currency **INR**, name e.g. "FanWarsIndia Fan Support",
+      minimum price **₹49** (must match `MIN_AMOUNT` in `create-order` and `js/support-flow.js`). Copy its `pdt_…` ID.
+      (The test product "Fan Wars_Test" is test-mode only and is not copied automatically.)
+- [ ] **Live API key**: Developer → API Keys (Live mode). Don't paste it in chat or any file.
+- [ ] **Live webhook**: Developer → Webhooks (Live mode) → add endpoint
+      `https://cntrkcpwetjjifubccha.supabase.co/functions/v1/dodo-webhook`, tick all four `payment.*` events.
+      Copy its `whsec_…` signing secret.
+- [ ] Check the checkout shows the brand name / logo you want (Dodo dashboard branding settings).
 
-## B. Switch the server to live money (owner, in Supabase)
-
-Supabase → project **fanwarsindia** → Edge Functions → Secrets. Replace the values (same names):
+## B. Supabase → Edge Functions → Secrets (owner)
 
 | Name | New value |
 |---|---|
-| `CASHFREE_APP_ID` | live App ID |
-| `CASHFREE_SECRET_KEY` | live Secret Key |
-| `CASHFREE_ENV` | `production` |
+| `DODO_API_KEY` | live API key |
+| `DODO_PRODUCT_ID` | live product ID |
+| `DODO_WEBHOOK_KEY` | live webhook signing secret |
+| `DODO_ENV` | `live_mode` |
 
-Save. From this moment the preview link also takes **real money** (it shares the same server) — it's behind your Vercel login, so only you can use it.
+From this moment the preview link also takes **real money** (same server). It is behind your Vercel login.
 
-## C. Open payments on the live site (Claude does this — just say "go live")
+## C. Open payments on the live site (Claude — just say "go live")
 
-The full site is already live; only payments are switched off. Test-card payments are tagged `is_test` and never shown on fanwarsindia.com, and the server refuses test-mode payments from the live domain.
+1. Squash-merge the `dodo` branch into `master` (never a normal merge — the branch history contains a raw image folder).
+2. In `js/config.js` set `paymentsOpenOnProduction = true`, bump `?v=`, commit, push `master`.
+3. Optional: `delete from contributions where is_test;` (test rows are already invisible on the live site).
+4. Check: Support on fanwarsindia.com opens Dodo checkout; `/progress.md` still 404.
 
-1. In `js/config.js` set `paymentsOpenOnProduction = true`, bump the `?v=` cache version, commit and push `master` → Vercel deploys. (The server side opens by itself once `CASHFREE_ENV=production`.)
-2. Tidy the database (optional — test rows are already invisible on the live site):
-   ```sql
-   select count(*), sum(amount) from contributions where is_test;   -- look first
-   delete from contributions where is_test;
-   ```
-3. Check: Support on fanwarsindia.com opens the real checkout (not "opens very soon"), and `/progress.md` is still 404.
+## D. First real payment (owner)
 
-## D. First real payment (owner, ~3 minutes)
+- [ ] On your phone, support any star for **₹49** (the minimum) via UPI with your own name/number.
+- [ ] Celebration screen shows; star shows ₹49 / 1 fan; Fan Activity shows you.
+- [ ] Claude confirms: webhook arrived, row is `success` with a `dodo_payment_id`.
+- [ ] Try **Share Fan Card**. Optionally refund the ₹49 from the Dodo dashboard and ask Claude to delete the row.
 
-- [ ] On your phone, open **fanwarsindia.com**, support any star with **₹1** via UPI, using your own name and number.
-- [ ] You should see the celebration screen; the star shows ₹1 / 1 fan; Fan Activity shows you.
-- [ ] Claude confirms: Cashfree webhook arrived (signature OK), payment marked paid with a payment ID.
-- [ ] Try **Share Fan Card** on the phone.
-- [ ] Optional: remove your ₹1 from the board afterwards — ask Claude to delete that row (and refund it from the Cashfree dashboard if you like).
+## E. Know these
 
-## E. After launch — know these
-
-- **Pause payments in an emergency** (site stays up, leaderboard still shows): in Supabase secrets, delete `CASHFREE_SECRET_KEY`. Fans then see "Payments open very soon". Put it back to resume.
-- **Hide an abusive name**: Supabase → SQL editor → `select admin_hide_fan_name('FW-XXXXXX');` (add `, true` to hide every contribution from that fan; `, false, false` to un-hide).
-- **Stuck payments** are rechecked automatically every 10 minutes (`reconcile-pending` job) — a fan who paid is never left uncounted. Unpaid checkouts expire after 1 hour.
-- **Refund requests** go to `support@fanwarsindia.com` (forwards to your Gmail). Refunds are issued from the Cashfree dashboard; after refunding, ask Claude to delete or mark that contribution so the leaderboard matches.
-- **Close payments again without taking the site down**: set `paymentsOpenOnProduction = false` in `js/config.js` and push (or use the emergency pause above).
-- **Roll back completely**: Claude reverts `master` to the previous commit; the previous site comes back within a minute.
+- **Pause payments in an emergency**: delete the `DODO_API_KEY` secret in Supabase. Fans see "Support opens very soon".
+- **Hide an abusive name**: `select admin_hide_fan_name('FW-XXXXXX');` (add `, true` for every contribution from that fan).
+- **Stuck payments** are re-checked every 10 minutes by `reconcile-pending`. A Dodo checkout link lives ~24 h; a row with no
+  payment attempt after that becomes `failed`, and `failed` rows are re-checked for a few hours in case the fan paid late.
+- **Refunds**: issued from the Dodo dashboard; then ask Claude to remove that contribution so the leaderboard matches.
+- **Close payments without taking the site down**: `paymentsOpenOnProduction = false` in `js/config.js` and push.
+- **Roll back**: Claude reverts `master`; the old site returns within a minute.

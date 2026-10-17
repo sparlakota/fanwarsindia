@@ -2,7 +2,7 @@
  * FanWarsIndia — app state, backed by Supabase.
  *
  * Reads: public_leaderboard / public_activity / public_top_fans (aggregates only, no phone numbers).
- * Writes: never directly. A support goes create-order -> Cashfree checkout -> Cashfree confirms ->
+ * Writes: never directly. A support goes create-order -> Dodo checkout -> Dodo confirms ->
  * the server marks it paid. The browser can't credit anything by itself.
  *
  * The roster's display fields (name, nickname, photo) still come from js/actors.js; only the
@@ -151,7 +151,7 @@ const Store = (function () {
     fetch(`${FW_CONFIG.supabaseUrl}/functions/v1/order-status?order_id=warmup`, { headers: baseHeaders }).catch(quiet);
   }
 
-  /** -> { order_id, payment_session_id, environment } */
+  /** -> { order_id, checkout_url, environment } */
   function createOrder({ actorId, amount, name, phone }) {
     return callFunction("create-order", {
       method: "POST",

@@ -45,14 +45,14 @@ Status as of the end of the frontend/design session (2026-09-18). Next session p
 
 - [x] Verified the frontend-only fan_power/fan_army math is correct before building on top of it: live-tested via `Store.addContribution()` (same name twice to one actor sums fan_power and counts as 1 fan_army; a different name counts as a 2nd; the same name to a *different* actor is correctly treated as a new supporter for that actor). See decisions.md if this needs re-checking later.
 - [x] Backend platform decided: **Supabase** (solves the no-Node/no-Python local constraint — DB + Edge Functions provisioned entirely through tool calls). New project `fanwarsindia` (id `cntrkcpwetjjifubccha`, region `ap-south-1`), free tier, under the user's existing org. Kept separate from the user's two other unrelated Supabase projects.
-- [x] Payment gateway decided: **Cashfree** (user's choice, switched from the originally-recommended Razorpay). Steps for the user's side (signup, KYC docs, ToS/Refund/Privacy pages, test-mode keys, webhook URL) already given — see decisions.md / chat history for the full list. **Blocked on the user**: need a Cashfree sandbox Client ID before the create-order Edge Function can be wired up for real (secret key never leaves the user / never enters chat — goes straight into a Supabase Edge Function secret).
+- [x] Payment gateway decided: **the previous payment gateway** (user's choice, switched from the originally-recommended Razorpay). Steps for the user's side (signup, KYC docs, ToS/Refund/Privacy pages, test-mode keys, webhook URL) already given — see decisions.md / chat history for the full list. **Blocked on the user**: need a the previous payment gateway sandbox Client ID before the create-order Edge Function can be wired up for real (secret key never leaves the user / never enters chat — goes straight into a Supabase Edge Function secret).
 - [x] Schema live: `actors` (seeded, matches `js/actors.js` exactly), `contributions` (empty, `status` pending/success/failed), `public_leaderboard()`/`public_activity()` SECURITY DEFINER functions for safe public reads. RLS on both tables; security advisor run clean (one intentional INFO, two intentional WARNs — see decisions.md for why each is expected, not a gap).
 - [x] **fan_army's definition upgraded**: real contributions will count unique *phone number* per actor, not unique name-string (the frontend-only demo's limitation). See decisions.md.
 
 ## Done — live deployment (2026-09-22)
 
 - [x] GitHub repo created: [github.com/sparlakota/fanwarsindia](https://github.com/sparlakota/fanwarsindia) (private — source has the actor photos and business logic; kept off public GitHub browsing even though the deployed site itself is public).
-- [x] Deployed to Vercel: **https://fanwarsindia.vercel.app** — this is the live URL to use for Cashfree's "website" field and any other place a public link is needed. Auto-deploys on every push to `master` from here on (Vercel's GitHub integration), zero-config static hosting (no build step, matches the no-build-tooling constraint).
+- [x] Deployed to Vercel: **https://fanwarsindia.vercel.app** — this is the live URL to use for the previous gateway's "website" field and any other place a public link is needed. Auto-deploys on every push to `master` from here on (Vercel's GitHub integration), zero-config static hosting (no build step, matches the no-build-tooling constraint).
 - [x] Custom domain **fanwarsindia.com** (bought via Namecheap) connected to the Vercel project: `fanwarsindia.com` → 308 redirect → `www.fanwarsindia.com` (Production). Namecheap's default parking records (CNAME `www`→`parkingpage.namecheap.com`, URL Redirect `@`) were replaced with Vercel's records (A `@`→`216.198.79.1`, CNAME `www`→`44a5a0726e5b07cc.vercel-dns-017.com.`). DNS was propagating as of setup — if `fanwarsindia.com` doesn't resolve yet, give it a few minutes/hours and check `vercel.com/shab5/fanwarsindia/settings/domains` for "Valid Configuration."
 
 ## Done — fonts, share card, Top Fans (2026-09-24)
@@ -60,7 +60,7 @@ Status as of the end of the frontend/design session (2026-09-18). Next session p
 - [x] Typography: names/nicknames/labels now Oswald, body Barlow (regular width, was Barlow Condensed — too cramped at 10-11px), Anton kept for headlines/numerals/buttons.
 - [x] Share artifact rebuilt: PNG now includes the star's photo (the old one was text-only Arial), fan name, unique card token (`FW-XXXXXX`), fanwarsindia.com. "Share Fan Card" opens the native share sheet with the image attached (Instagram/WhatsApp/X on phones); Instagram button saves the card + copies caption; WhatsApp/X buttons share the text + link.
 - [x] Third leaderboard tab "Top Fans": individual supporters ranked by total contributed, showing the star they back most (+N more), fan level, and support count. Same top-3 tint treatment. Has an empty state.
-- [x] Cache-bust `?v=7`. Payments remain deferred (Cashfree KYC in progress).
+- [x] Cache-bust `?v=7`. Payments remain deferred (the previous payment gateway KYC in progress).
 - Not yet: no public per-card URL (`/card/FW-XXXXXX`) — needs the backend; link previews on WhatsApp/X show the site, not the individual card.
 
 ## Done — full-site bug sweep (2026-09-24)
@@ -76,55 +76,55 @@ Status as of the end of the frontend/design session (2026-09-18). Next session p
 - [x] Activity "x mins ago" refreshes every minute. `#leaderboard` no longer hides under the sticky header when jumped to.
 - [x] Share card: long star titles shrink to fit two lines; more space above the amount.
 
-## Done — payments build, waiting on Cashfree keys (2026-09-24)
+## Done — payments build, waiting on the previous payment gateway keys (2026-09-24)
 
-- [x] DB: `card_token`, `cf_payment_id` columns; phone/name/amount check constraints; `public_top_fans()` (last-4 only); `public_activity()` now ordered by confirmation time.
-- [x] Edge Functions deployed: `create-order`, `order-status`, `cashfree-webhook` (source in `supabase/functions/`). Smoke-tested: preflight/CORS, "not configured" 503, unauthenticated calls rejected, status lookups, bad ids rejected, contributions table unreadable from the browser.
-- [x] Frontend reads live data from Supabase (60s refresh + on tab focus); support flow now asks for name + mobile, runs Cashfree checkout, polls for confirmation, and has failed/processing screens; redirect returns (`/?order_id=`) resume the flow.
+- [x] DB: `card_token`, `old-gateway-payment-id` columns; phone/name/amount check constraints; `public_top_fans()` (last-4 only); `public_activity()` now ordered by confirmation time.
+- [x] Edge Functions deployed: `create-order`, `order-status`, `old-gateway` (source in `supabase/functions/`). Smoke-tested: preflight/CORS, "not configured" 503, unauthenticated calls rejected, status lookups, bad ids rejected, contributions table unreadable from the browser.
+- [x] Frontend reads live data from Supabase (60s refresh + on tab focus); support flow now asks for name + mobile, runs the previous payment gateway checkout, polls for confirmation, and has failed/processing screens; redirect returns (`/?order_id=`) resume the flow.
 - [x] Identity = mobile number, no OTP (user decision). Top Fans shows `Name ••1234`.
-- [x] Tested success/failed screens end-to-end with temporary `fw_testdata_` rows (deleted afterwards; DB is empty). **Not yet tested against Cashfree itself** — no keys yet.
+- [x] Tested success/failed screens end-to-end with temporary `fw_testdata_` rows (deleted afterwards; DB is empty). **Not yet tested against the previous payment gateway itself** — no keys yet.
 - [x] **Not pushed/deployed to fanwarsindia.com yet** — deploying now would replace the demo support flow with "Payments open very soon". Deploy once sandbox payments are verified (or when the user decides).
 
 ### Sandbox test (2026-09-28) — passed
-- Cashfree test keys set as Supabase secrets (`CASHFREE_ENV=sandbox`). Cashfree's built-in "NOTIFY_URL" webhook entry (v2023-08-01, success events) delivers to the `notify_url` we send per order — no separate webhook endpoint needed.
-- Real sandbox payment, ₹49 to Mahesh Babu, test Visa card + OTP 111000: webhook arrived twice from Cashfree, signature verified both times (200), `syncOrder` marked it paid (cf_payment_id stored), celebration screen + card token matched the DB, leaderboard / Fan Army / Top Fans (`Test Fan ••0001`) / Fan Activity all updated. Unpaid attempts stayed `pending` and were not counted.
-- Not verified: the "closed the checkout" screen and an actual failed payment (Cashfree's checkout doesn't close via Escape/backdrop; browser automation couldn't reach its close control). Card OTP opens as a pop-up window — fine for real users, blocked for automation.
+- the previous payment gateway test keys set as Supabase secrets (`old-gateway=sandbox`). the previous gateway's built-in "NOTIFY_URL" webhook entry (v2023-08-01, success events) delivers to the `notify_url` we send per order — no separate webhook endpoint needed.
+- Real sandbox payment, ₹49 to Mahesh Babu, test Visa card + OTP 111000: webhook arrived twice from the previous payment gateway, signature verified both times (200), `syncOrder` marked it paid (old-gateway-payment-id stored), celebration screen + card token matched the DB, leaderboard / Fan Army / Top Fans (`Test Fan ••0001`) / Fan Activity all updated. Unpaid attempts stayed `pending` and were not counted.
+- Not verified: the "closed the checkout" screen and an actual failed payment (the previous gateway's checkout doesn't close via Escape/backdrop; browser automation couldn't reach its close control). Card OTP opens as a pop-up window — fine for real users, blocked for automation.
 - Test rows (phones 99999000xx) are still in the DB — delete before go-live.
-- Cashfree checkout shows "Business Name" — set the brand name/logo in the Cashfree dashboard.
-- **Do not deploy the new frontend while `CASHFREE_ENV=sandbox`**: anyone could "pay" with public test cards and the fake payments would count on the live leaderboard.
+- the previous payment gateway checkout shows "Business Name" — set the brand name/logo in the the previous payment gateway dashboard.
+- **Do not deploy the new frontend while `old-gateway=sandbox`**: anyone could "pay" with public test cards and the fake payments would count on the live leaderboard.
 
 ### Full audit (2026-09-28)
-Fixed: browser roles' table privileges revoked (defense in depth behind RLS); per-IP flood limit on create-order; return-URL origin check was a substring match (`evil-fanwarsindia.com` passed) → exact allowlist; emoji/Telugu names could fail Cashfree order creation → ASCII-only copy sent; `escapeHTML` didn't escape quotes (attribute injection risk) → fixed and verified with a live XSS payload; leaderboard showed all-₹0 before data loaded / on outage → skeleton + retry; Top Fans' masked digits were truncated away on long names → own line; card token escaped. Probed from outside with the public key: no reads of phone numbers, no writes, forged webhooks rejected, malformed input rejected. DB wiped of all test rows afterwards.
+Fixed: browser roles' table privileges revoked (defense in depth behind RLS); per-IP flood limit on create-order; return-URL origin check was a substring match (`evil-fanwarsindia.com` passed) → exact allowlist; emoji/Telugu names could fail the previous payment gateway order creation → ASCII-only copy sent; `escapeHTML` didn't escape quotes (attribute injection risk) → fixed and verified with a live XSS payload; leaderboard showed all-₹0 before data loaded / on outage → skeleton + retry; Top Fans' masked digits were truncated away on long names → own line; card token escaped. Probed from outside with the public key: no reads of phone numbers, no writes, forged webhooks rejected, malformed input rejected. DB wiped of all test rows afterwards.
 
 Legal pages drafted (terms/privacy/refund/contact.html), linked from the footer and from a consent line under the Pay button; key positions: not affiliated with any actor, money goes to FanWarsIndia not the actor, not gambling, digital + non-refundable except failed/double/unauthorised charges (5–7 working days), only last 4 phone digits public, data stored in Mumbai, DPDP rights + Grievance Officer. **Published 2026-09-28** (commit 20735e1: the four pages, their CSS and footer links only, applied to the previously-live index.html; the payment code was deliberately left out and is still uncommitted locally). Placeholders filled 2026-09-28 (Shabareesh Parlakota, sole proprietor, Gurugram address, support@fanwarsindia.com, owner is Grievance Officer; no phone number by choice — phone box removed). Should get a lawyer/CA read before real scale.
-Open (not code): Cashfree checkout brand name ("Business Name"); no moderation for offensive fan names; closed-checkout and failed-payment screens still need one manual sandbox run; Tailwind runs from its CDN (fine now, slower than a build).
+Open (not code): the previous payment gateway checkout brand name ("Business Name"); no moderation for offensive fan names; closed-checkout and failed-payment screens still need one manual sandbox run; Tailwind runs from its CDN (fine now, slower than a build).
 
 ### 2026-09-28 (later)
 - Moderation: `name_hidden` + owner-only `admin_hide_fan_name()`; public functions show "A fan" for hidden names.
 - All payment work committed to branch `payments` and pushed → Vercel preview for phone testing; Edge Function CORS/return URL accept this team's preview origins. The preview is behind Vercel Authentication (strangers get a Vercel sign-in), so sandbox payments can't be made by the public there.
-- Re-test on the preview (sandbox): ₹99 card payment for Jr NTR → webhook twice (200) → paid with cf_payment_id → celebration screen ("climbed from #5 to #1") → leaderboard/Top Fans/activity updated. Hide switch verified: "A fan" publicly while hidden, money still counted, name restored on un-hide. **Failed-payment and closed-checkout screens still not exercised.**
+- Re-test on the preview (sandbox): ₹99 card payment for Jr NTR → webhook twice (200) → paid with old-gateway-payment-id → celebration screen ("climbed from #5 to #1") → leaderboard/Top Fans/activity updated. Hide switch verified: "A fan" publicly while hidden, money still counted, name restored on un-hide. **Failed-payment and closed-checkout screens still not exercised.**
 
-- Safety net: `reconcile-pending` Edge Function + pg_cron every 10 min + 1 h order expiry. Tested by forcing the paid ₹99 test order back to pending → job recovered it (payment id restored). Also saw a Cashfree sandbox 504 timeout on order creation — handled correctly (order marked failed, fan gets an error, retry worked).
-- Speed (user reported slow test payments): measured — our functions cost ~0.3 s warm but 2–4 s on a cold start; Cashfree **sandbox** order creation varied 1–11 s and returned 504 twice today (the main cause; production is expected to be faster). Fixes: Cashfree SDK preloaded + both payment functions woken when the support sheet opens; CORS preflight cached 2 h (`Access-Control-Max-Age`); create-order's DB checks run in parallel; "taking longer than usual" message after 5 s; clear `gateway_error` message.
+- Safety net: `reconcile-pending` Edge Function + pg_cron every 10 min + 1 h order expiry. Tested by forcing the paid ₹99 test order back to pending → job recovered it (payment id restored). Also saw a the previous payment gateway sandbox 504 timeout on order creation — handled correctly (order marked failed, fan gets an error, retry worked).
+- Speed (user reported slow test payments): measured — our functions cost ~0.3 s warm but 2–4 s on a cold start; the previous payment gateway **sandbox** order creation varied 1–11 s and returned 504 twice today (the main cause; production is expected to be faster). Fixes: the previous payment gateway SDK preloaded + both payment functions woken when the support sheet opens; CORS preflight cached 2 h (`Access-Control-Max-Age`); create-order's DB checks run in parallel; "taking longer than usual" message after 5 s; clear `gateway_error` message.
 - New hero images (user-supplied, crowd-only, no actor likenesses): tall `hero-mobile.jpg` for phones, wide `hero-desktop.jpg` for laptops via `<picture>`; 2 MB PNGs compressed to 154/238 KB; old `hero-bg.jpg` (AI star lookalikes on banners) deleted; og-image rebuilt; hero scrim lightened for the darker new photos.
 - **Everything except payments published to fanwarsindia.com**: `is_test` flag + `p_include_test` hides sandbox payments from the live site; create-order refuses sandbox payments from the live domain; live Support shows "opens very soon" (`paymentsOpenOnProduction` in config.js). `payments` branch merged into master.
-- `GO-LIVE.md` checklist written (owner steps in Cashfree + Supabase, Claude steps, first ₹1 payment, emergency pause, rollback).
+- `GO-LIVE.md` checklist written (owner steps in the previous payment gateway + Supabase, Claude steps, first ₹1 payment, emergency pause, rollback).
 
 ### Next steps to go live with test payments
-1. User: fix the Cashfree test-mode "server error" (support chat), generate test App ID + Secret Key.
-2. User: add Supabase secrets `CASHFREE_APP_ID`, `CASHFREE_SECRET_KEY`, `CASHFREE_ENV=sandbox` (Dashboard → Edge Functions → Secrets).
-3. User: in Cashfree (test mode) add webhook URL `https://cntrkcpwetjjifubccha.supabase.co/functions/v1/cashfree-webhook`.
+1. User: fix the the previous payment gateway test-mode "server error" (support chat), generate test App ID + Secret Key.
+2. User: add Supabase secrets `old-gateway`, `old-gateway`, `old-gateway=sandbox` (Dashboard → Edge Functions → Secrets).
+3. User: in the previous payment gateway (test mode) add webhook URL `https://cntrkcpwetjjifubccha.supabase.co/functions/v1/old-gateway`.
 4. Claude: run a sandbox payment end-to-end on localhost (success, failure, closing the checkout), check the webhook fires and the signature verifies, then commit + push.
-5. At go-live: live keys, `CASHFREE_ENV=production`, whitelist `www.fanwarsindia.com` in Cashfree, Terms/Refund/Privacy pages.
+5. At go-live: live keys, `old-gateway=production`, whitelist `www.fanwarsindia.com` in the previous payment gateway, Terms/Refund/Privacy pages.
 
 ## Outstanding — rest of the payments build
 
-1. **Cashfree Edge Functions** (not started): a `create-order` function (calls Cashfree Orders API, needs the user's sandbox keys) and a `cashfree-webhook` function (HMAC-SHA256 signature verification per Cashfree's docs, flips `contributions.status` to `success`, which is what actually credits fan_power/fan_army — never trust the browser redirect alone).
+1. **the previous payment gateway Edge Functions** (not started): a `create-order` function (calls the previous payment gateway Orders API, needs the user's sandbox keys) and a `old-gateway` function (HMAC-SHA256 signature verification per the previous gateway's docs, flips `contributions.status` to `success`, which is what actually credits fan_power/fan_army — never trust the browser redirect alone).
 2. **Frontend rework**: `Store` needs to move from `localStorage`+`ACTORS` to calling Supabase (`public_leaderboard()`/`public_activity()` for reads, the new `create-order` function to start a contribution). `Store.addContribution()`-equivalent becomes async with real loading/failed states, which don't exist today because nothing can currently fail.
-3. **Cashfree Checkout on the frontend**: use Cashfree's own hosted Checkout (JS SDK / redirect), never a custom card form.
-4. **Terms/Refund/Privacy pages**: needed both for Cashfree's own merchant approval and to actually publish before real payments go live. Not drafted yet.
+3. **the previous payment gateway Checkout on the frontend**: use the previous gateway's own hosted Checkout (JS SDK / redirect), never a custom card form.
+4. **Terms/Refund/Privacy pages**: needed both for the previous gateway's own merchant approval and to actually publish before real payments go live. Not drafted yet.
 5. **Anti-fraud**: phone-number uniqueness (above) is a real improvement over name-matching, but nothing stops one phone number backing many actors with tiny amounts, or other abuse patterns — revisit before going fully live.
-6. **Testing**: full run-through in Cashfree's sandbox/test mode before flipping to live keys.
+6. **Testing**: full run-through in the previous gateway's sandbox/test mode before flipping to live keys.
 
 ## Known minor gaps (not blocking, worth a pass eventually)
 
@@ -141,3 +141,12 @@ Open (not code): Cashfree checkout brand name ("Business Name"); no moderation f
 - Added branded `404.html` (Vercel serves it for unknown routes), `robots.txt`, `sitemap.xml`. Cache-bust bumped to `?v=17`.
 - Audit "3 images missing alt" = the 3 intentional `alt=""` decorative images (header crown, hero backdrop, #1 crown). No `<img>` lacks the attribute.
 - NOT done: replacing the Tailwind CDN with a compiled CSS build — needs a build tool (no Node on this machine) and the user's OK (see CLAUDE.md constraint 4).
+
+## 2026-10-17 — the previous payment gateway declined; moved to Dodo Payments (test mode)
+- the previous payment gateway did not approve the account. Dodo Payments approved (category "Others"; fan-support payments, instant digital delivery).
+- Test product `pdt_0NpvOH0fLyksv8gDHl8nl` "Fan Wars_Test": one-time, pay-what-you-want, INR, minimum ₹49. Rename it before go-live.
+- Built on branch `dodo` (not merged): new create-order / order-status / dodo-webhook / reconcile-pending, Dodo overlay checkout in support-flow.js, ₹49 minimum, policy pages name Dodo. Migration `add_dodo_columns_to_contributions`.
+- Verified: webhook registered (4 payment events, signature enforced), create-order makes real Dodo test checkouts (₹49, INR, order ref in metadata), live origin refused, below-minimum refused, closing the checkout shows "Payment not completed". NOT yet verified: a completed test payment + webhook (the automated browser could not finish the card step) — owner to test on the preview link.
+- Dodo checkout asks the fan for name, email and zip; 15-minute checkout timer.
+- Mistakes fixed: placeholder common.ts briefly deployed to dodo-webhook (redeployed); a regex lost its escaping in support-flow.js (caught locally); raw images folder committed to `dodo` then removed in a follow-up commit (history still has it → squash-merge only).
+- 2026-10-17 (later): the previous payment gateway removed from the project. DB: the order-reference column renamed `order_ref`, `old-gateway-payment-id` dropped (migration `remove_old_gateway_columns_use_order_ref`); all four functions redeployed on `order_ref`; `old-gateway` source deleted from the repo. Owner still to delete: the deployed `old-gateway` function and the `old-gateway*` secrets in the Supabase dashboard (the connector cannot delete functions/secrets). Older entries in this file mention the previous payment gateway only as history.
