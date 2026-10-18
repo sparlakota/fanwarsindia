@@ -7,16 +7,16 @@
  */
 
 const SupportFlow = (function () {
-  const AMOUNT_OPTIONS = [49, 99, 199, 499, 999];
+  const AMOUNT_OPTIONS = [49, 99, 199, 499, 999, 9999];
   const MIN_AMOUNT = 49; // Dodo product minimum — keep in sync with create-order
-  const MAX_AMOUNT = 100000;
+  const MAX_AMOUNT = 1000000; // silent safety ceiling against typos — never shown to fans; keep in sync with create-order and the DB check
   const BUSY_STEPS = ["paying", "verifying"];
 
   const ERROR_MESSAGES = {
     payments_not_configured: "Payments open very soon — we're finishing setup with our payment partner.",
     invalid_phone: "Enter a valid 10-digit Indian mobile number.",
     invalid_name: "Enter your name.",
-    invalid_amount: `Choose an amount between ₹${MIN_AMOUNT} and ₹${MAX_AMOUNT.toLocaleString("en-IN")}.`,
+    invalid_amount: `Enter an amount of ₹${MIN_AMOUNT} or more.`,
     too_many_attempts: "Too many attempts from this number. Try again in a few minutes.",
     network: "Couldn't reach the server. Check your connection and try again.",
     checkout_load: "Couldn't open the payment window. Check your connection and try again.",
@@ -344,13 +344,12 @@ const SupportFlow = (function () {
             id="custom-amount-input"
             type="number"
             min="${MIN_AMOUNT}"
-            max="${MAX_AMOUNT}"
             step="1"
             inputmode="numeric"
             placeholder="e.g. 250"
             class="w-full bg-white/5 border border-white/15 rounded-md px-4 py-3 text-lg font-display focus:outline-none focus:border-fwred"
           />
-          <p id="custom-amount-hint" class="text-[11px] text-white/35 mt-1">Between ${formatRupees(MIN_AMOUNT)} and ${formatRupees(MAX_AMOUNT)}</p>
+          <p id="custom-amount-hint" class="text-[11px] text-white/35 mt-1">Minimum ${formatRupees(MIN_AMOUNT)}</p>
         </div>
 
         <button id="amount-continue" disabled
@@ -640,6 +639,10 @@ const SupportFlow = (function () {
     customInput.addEventListener("input", () => {
       flow.amount = cleanAmount(customInput.value);
       const bad = customInput.value !== "" && flow.amount === null;
+      const tooBig = bad && Number(customInput.value) > MAX_AMOUNT;
+      hint.textContent = tooBig
+        ? "That is more than a single payment can take. For a larger contribution, write to support@fanwarsindia.com."
+        : `Minimum ${formatRupees(MIN_AMOUNT)}`;
       hint.classList.toggle("text-fwred", bad);
       hint.classList.toggle("text-white/35", !bad);
       enableContinue(flow.amount);
