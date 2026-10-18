@@ -380,7 +380,7 @@ const SupportFlow = (function () {
           type="text"
           maxlength="40"
           autocomplete="name"
-          placeholder="Shown on your Fan Card and the fan wall"
+          placeholder="Shown on your digital Fan Card and the Fan Leaderboard"
           value="${escapeHTML(flow.supporterName)}"
           class="w-full bg-white/5 border border-white/15 rounded-md px-4 py-3.5 text-lg font-body focus:outline-none focus:border-fwred mb-5"
         />
