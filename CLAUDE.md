@@ -14,7 +14,7 @@ Static frontend (Vercel) + **Supabase backend** (Postgres + 4 Edge Functions) + 
 
 Plain HTML/CSS/vanilla JS, loaded via classic (non-module) `<script>` tags so it runs straight off the filesystem or any static server — no npm, no bundler, no framework. **This was forced, not chosen**: the dev machine has no Node, no Python, no ImageMagick. See decisions.md for what that ruled in/out. Do not introduce a build step, a framework, or npm dependencies without checking with the user first — the whole architecture assumes zero install step.
 
-Tailwind is loaded via the CDN script (`cdn.tailwindcss.com`) with an inline config in `index.html` for the brand colors/fonts. Custom CSS (grain, glow, animations, brand-specific classes) lives in `css/styles.css` on top of it.
+Tailwind is **pre-compiled** (owner approved this one build step on 2026-10-18; the CDN script was removed): `css/tailwind.css` is a committed, minified file (~18 KB) that every page loads after `css/styles.css`. Brand colors/fonts live in `tailwind.config.js`. **After adding or changing any Tailwind class in `*.html` or `js/*.js`, rebuild and commit it:** `powershell -File scripts/build-css.ps1` (needs Node; npx fetches Tailwind 3.4.17 on first run). Forgetting to rebuild means a new class silently has no styles. Custom CSS (grain, glow, animations, brand-specific classes) lives in `css/styles.css`. Do not add other build steps, frameworks or npm dependencies without asking.
 
 ## Running it locally
 
@@ -38,7 +38,9 @@ terms.html / privacy.html / refund.html / contact.html
                         Legal pages (drafted 2026-09-28, not lawyer-reviewed). Details only the owner knows are
                         <span class="fill-me">[…]</span> — bright yellow. NEVER deploy with any left:
                         `grep -c fill-me *.html` must be 0 for the four pages before a push.
-css/styles.css           Custom CSS on top of Tailwind CDN utilities
+css/styles.css           Custom CSS (brand classes, animations)
+css/tailwind.css          COMPILED Tailwind utilities (committed; rebuild with scripts/build-css.ps1)
+css/tailwind.input.css / tailwind.config.js   Tailwind build inputs (hidden from the public site via .vercelignore)
 js/
   config.js               FW_CONFIG — Supabase URL + public anon key (safe to ship; see Backend section)
   actors.js               ACTORS array — roster display data (name, nickname, photo); numbers come from the server
@@ -131,6 +133,6 @@ The old browser-only store (localStorage key `fanwarsindia_demo_state_v1`) is go
 1. **No real actor photos may be sourced by Claude from the web.** Copyright + Indian personality/publicity-rights exposure (live litigation precedent: Anil Kapoor, Amitabh Bachchan, Jackie Shroff). The current 20 photos were supplied by the user directly (see decisions.md) — only add/replace actor images when the user hands you a local file path.
 2. **No AI-generated actor images either** — user explicitly declined this route too.
 3. Don't expose the local dev server beyond `127.0.0.1` without re-confirming the network safety context with the user (see decisions.md — school wifi consideration).
-4. Don't add a build step / npm / framework without checking first (see Stack section above).
+4. Don't add any build step / npm / framework beyond the Tailwind CSS compile (approved 2026-10-18) without checking first (see Stack section above).
 5. Never put the Dodo API key / webhook secret (or the Supabase service-role key) in the repo, in `js/`, or in chat. Secrets live only in Supabase's Edge Function secrets. Never make `contributions` readable to the browser — it holds phone numbers. Never `git add -A` blindly: `Fan Wars India_Images/` (raw source images) is untracked and ignored — stage files by name.
 6. Don't switch Dodo to `live_mode` (live money) without the user explicitly saying so. Merge the `dodo` branch with a **squash** merge only (its history contains a raw image folder that was later removed).

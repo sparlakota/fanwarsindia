@@ -7,3 +7,7 @@ decisions.md
 *.md
 
 supabase/
+
+# Tailwind build inputs (the compiled css/tailwind.css is what the site loads)
+tailwind.config.js
+css/tailwind.input.css
