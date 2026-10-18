@@ -274,7 +274,7 @@ function renderActivity() {
         ).join("");
     return;
   }
-  const items = Store.state.activity.slice(0, 8);
+  const items = Store.state.activity.slice(0, 15);
   list.innerHTML = items.length
     ? items.map(activityItemHTML).join("")
     : `<p class="text-white/40 text-sm py-6 text-center">No fan activity yet — be the first to back your star.</p>`;
