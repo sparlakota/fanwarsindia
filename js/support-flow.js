@@ -9,7 +9,7 @@
 const SupportFlow = (function () {
   const AMOUNT_OPTIONS = [49, 99, 199, 499, 999, 9999];
   const MIN_AMOUNT = 49; // Dodo product minimum — keep in sync with create-order
-  const MAX_AMOUNT = 1000000; // silent safety ceiling against typos — never shown to fans; keep in sync with create-order and the DB check
+  const LARGEST_AMOUNT = 2147483647; // no limit by design: this is only the database column's capacity (a whole number of rupees)
   const BUSY_STEPS = ["paying", "verifying"];
 
   const ERROR_MESSAGES = {
@@ -43,7 +43,7 @@ const SupportFlow = (function () {
 
   function cleanAmount(value) {
     const n = Math.round(Number(value));
-    return Number.isFinite(n) && n >= MIN_AMOUNT && n <= MAX_AMOUNT ? n : null;
+    return Number.isFinite(n) && n >= MIN_AMOUNT && n <= LARGEST_AMOUNT ? n : null;
   }
 
   /** "+91 98765 43210" / "098765 43210" / "9876543210" -> "9876543210"; anything else -> null. */
@@ -534,6 +534,7 @@ const SupportFlow = (function () {
             <span class="w-5 h-5">${Icons.link()}</span><span class="text-[10px] uppercase">Copy</span>
           </button>
         </div>
+        <p class="text-[11px] text-white/35 mt-2 text-center">On your phone, tap an app and your card image goes straight into it. For Instagram, choose Stories.</p>
         <button id="download-card" class="mt-3 w-full chip-outline tap-active rounded-md py-3 font-display uppercase text-sm flex items-center justify-center gap-2">
           <span class="w-4 h-4">${Icons.download()}</span> Download Fan Card
         </button>
@@ -639,10 +640,6 @@ const SupportFlow = (function () {
     customInput.addEventListener("input", () => {
       flow.amount = cleanAmount(customInput.value);
       const bad = customInput.value !== "" && flow.amount === null;
-      const tooBig = bad && Number(customInput.value) > MAX_AMOUNT;
-      hint.textContent = tooBig
-        ? "That is more than a single payment can take. For a larger contribution, write to support@fanwarsindia.com."
-        : `Minimum ${formatRupees(MIN_AMOUNT)}`;
       hint.classList.toggle("text-fwred", bad);
       hint.classList.toggle("text-white/35", !bad);
       enableContinue(flow.amount);
@@ -735,22 +732,35 @@ const SupportFlow = (function () {
         toast("Couldn't build the card — try Download");
       }
     });
-    document.getElementById("share-whatsapp").addEventListener("click", () => {
-      window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, "_blank", "noopener");
-    });
-    document.getElementById("share-x").addEventListener("click", () => {
-      window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`, "_blank", "noopener");
-    });
-    document.getElementById("share-instagram").addEventListener("click", async () => {
-      // Copy first, while the tap still counts as a user gesture (Safari drops it after an await).
-      const copied = await copyToClipboard(shareText);
+    // WhatsApp / X / Instagram: on a phone the share sheet opens with the card IMAGE attached, so the
+    // fan taps the app (for Instagram: Stories). Web pages cannot push a file into one named app any other
+    // way. On a desktop browser (no file sharing) we save the card and open the app's page instead.
+    async function shareImageTo(target) {
+      let blob;
       try {
-        FanCard.saveBlob(await blobPromise, filename);
-        toast(copied ? "Card saved + caption copied — add it to your story" : "Card saved — add it to your story");
+        blob = await blobPromise;
       } catch (e) {
         toast("Couldn't build the card — try Download");
+        return;
       }
-    });
+      const outcome = await FanCard.share(blob, filename, shareText);
+      if (outcome === "shared" || outcome === "cancelled") return;
+
+      FanCard.saveBlob(blob, filename);
+      if (target === "whatsapp") {
+        window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, "_blank", "noopener");
+        toast("Card saved — attach it in WhatsApp");
+      } else if (target === "x") {
+        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`, "_blank", "noopener");
+        toast("Card saved — attach it to your post");
+      } else {
+        const copied = await copyToClipboard(shareText);
+        toast(copied ? "Card saved + caption copied — add it to your story" : "Card saved — add it to your story");
+      }
+    }
+    document.getElementById("share-whatsapp").addEventListener("click", () => shareImageTo("whatsapp"));
+    document.getElementById("share-x").addEventListener("click", () => shareImageTo("x"));
+    document.getElementById("share-instagram").addEventListener("click", () => shareImageTo("instagram"));
     document.getElementById("share-copy").addEventListener("click", async () => {
       toast((await copyToClipboard(shareText)) ? "Copied to clipboard" : "Couldn't copy — select and copy manually");
     });

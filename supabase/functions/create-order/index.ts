@@ -12,7 +12,7 @@ import {
 } from "../_shared/common.ts";
 
 const MIN_AMOUNT = 49; // the Dodo product's minimum price (₹49); lower it in Dodo first if this ever changes
-const MAX_AMOUNT = 1000000; // silent safety ceiling against typos (not shown to fans); keep in sync with the DB check and js/support-flow.js
+const MAX_AMOUNT = 2147483647; // no limit by design: only the database column's capacity (whole rupees); keep in sync with js/support-flow.js
 const MAX_PENDING_PER_PHONE = 5; // per 10 minutes
 // Per connection, unpaid orders only. Generous because Indian mobile carriers put many users behind one IP.
 const MAX_UNPAID_PER_IP = 30; // per 10 minutes
