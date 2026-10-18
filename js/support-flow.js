@@ -470,7 +470,14 @@ const SupportFlow = (function () {
   function successStepHTML() {
     const { actor, result } = flow;
     const level = result.level;
-    const rankMoved = result.previousRank && result.newRank && result.previousRank !== result.newRank;
+    // A star with no support yet is unranked on the board, so "climbed from #4" would be made up.
+    const enteredBoard = result.previousFanPower === 0 && result.newRank;
+    const rankMoved = !enteredBoard && result.previousRank && result.newRank && result.previousRank !== result.newRank;
+    const rankLine = enteredBoard
+      ? `Your star entered the board at #${result.newRank}`
+      : rankMoved
+        ? `Your star climbed from #${result.previousRank} to #${result.newRank}`
+        : "";
 
     return shell(`
       <div class="p-5 pb-8 text-center">
@@ -493,7 +500,7 @@ const SupportFlow = (function () {
             <span class="text-fwred">→</span>
             <span class="text-fwwhite text-base">${formatRupees(result.newFanPower)}</span>
           </div>
-          ${rankMoved ? `<p class="text-fwred text-xs uppercase tracking-wide mt-1">Your star climbed from #${result.previousRank} to #${result.newRank}</p>` : ""}
+          ${rankLine ? `<p class="text-fwred text-xs uppercase tracking-wide mt-1">${rankLine}</p>` : ""}
         </div>
 
         <div class="mt-6 rounded-lg border border-white/10 bg-white/[0.03] p-4">

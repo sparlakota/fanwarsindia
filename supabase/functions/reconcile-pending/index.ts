@@ -28,6 +28,7 @@ Deno.serve(async (req) => {
       .select("order_ref")
       .eq("status", status)
       .not("dodo_session_id", "is", null)
+      .eq("is_test", dodo.mode === "test_mode") // only orders made in the mode the server is running in
       .gte("created_at", new Date(Date.now() - hours * 3600_000).toISOString())
       .lte("created_at", until)
       .order("created_at", { ascending: true })

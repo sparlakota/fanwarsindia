@@ -100,6 +100,8 @@ export async function syncOrder(supabase: SupabaseClient, dodo: DodoConfig, orde
     .maybeSingle();
   if (error) throw error;
   if (!row || row.status === "success" || !row.dodo_session_id) return row;
+  // A test-mode checkout doesn't exist in the live account (and vice versa): never look it up there.
+  if (row.is_test !== (dodo.mode === "test_mode")) return row;
 
   const age = Date.now() - Date.parse(row.created_at);
   if (row.status === "failed" && age > LATE_PAYMENT_WINDOW_MS) return row;

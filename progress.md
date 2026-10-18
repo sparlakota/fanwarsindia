@@ -150,3 +150,10 @@ Open (not code): the previous payment gateway checkout brand name ("Business Nam
 - Dodo checkout asks the fan for name, email and zip; 15-minute checkout timer.
 - Mistakes fixed: placeholder common.ts briefly deployed to dodo-webhook (redeployed); a regex lost its escaping in support-flow.js (caught locally); raw images folder committed to `dodo` then removed in a follow-up commit (history still has it → squash-merge only).
 - 2026-10-17 (later): the previous payment gateway removed from the project. DB: the order-reference column renamed `order_ref`, `old-gateway-payment-id` dropped (migration `remove_old_gateway_columns_use_order_ref`); all four functions redeployed on `order_ref`; `old-gateway` source deleted from the repo. Owner still to delete: the deployed `old-gateway` function and the `old-gateway*` secrets in the Supabase dashboard (the connector cannot delete functions/secrets). Older entries in this file mention the previous payment gateway only as history.
+
+## 2026-10-18 — Live audit after go-live
+- Live: Dodo live mode, Support open on fanwarsindia.com. First real payment (₹49, owner) credited by webhook 44 s after checkout start.
+- Fixed: safety-net job looked up an old TEST-mode order in the LIVE Dodo account every 10 min (404 errors). `syncOrder()` now skips rows whose `is_test` doesn't match `DODO_ENV`, and `reconcile-pending` only selects rows of the current mode. Redeployed order-status, dodo-webhook, reconcile-pending (create-order doesn't call syncOrder, left as is). Stuck test order "Raj" marked failed.
+- Fixed: celebration screen said "climbed from #4 to #1" for a star that had ₹0 (unranked). Now "Your star entered the board at #N".
+- Fixed: Terms said contributions start at ₹1 (now ₹49, GST included) and now says Dodo Payments is merchant of record (statement name); Refund timeline 5–7 → 3–15 working days (Dodo's stated range).
+- Checked OK: all pages/links/images, leaderboards (power/army/top fans), activity, amount/name/phone validation, XSS-safe names, fan card PNG 1080x1920, ?order_id return, hidden files 404, forged webhook 401, cron running.
