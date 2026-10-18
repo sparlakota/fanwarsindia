@@ -96,6 +96,8 @@ Supabase project `fanwarsindia` (id `cntrkcpwetjjifubccha`, ap-south-1), managed
 
 **Abuse limits in `create-order`**: max 5 pending orders per phone and 30 unpaid orders per hashed IP, per 10 minutes (IP limit is generous on purpose — Indian carriers share IPs via CGNAT). 
 
+**Offline (cash) contributions** (2026-10-18): `contributions.source` is `dodo` (default) or `cash`. Cash rows are real contributions the owner received in person and recorded by hand: `status=success`, `is_test=false`, `order_ref` like `fw_cash_001`, no Dodo ids, and `supporter_phone` = `cash-<firstname>-<last4>` (never a dialable number, so `right(key,4)` still gives the last 4 digits for Top Fans). The reconcile job and `syncOrder()` ignore them (they have no `dodo_session_id`). Add new ones only on the owner's say-so with real people, amounts and the last 4 digits; never invent entries. Terms mention offline launch contributions.
+
 **Public read functions** (SECURITY DEFINER, pinned search_path; the advisor WARNs about anon access are intentional): `public_leaderboard()` (fan_power = sum of success, fan_army = distinct phones), `public_activity()` (last 50 successes, ordered by confirmation time), `public_top_fans(p_limit)` (one row per phone; returns only `phone_last4`, never the number or a hash of it).
 
 **Identity**: a fan = a mobile number (user's decision, 2026-09-24: no OTP, to keep checkout frictionless). Names are display-only; Top Fans shows `Name ••1234`.
