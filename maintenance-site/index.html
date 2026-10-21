@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>FanWarsIndia — Under Maintenance</title>
+<meta name="description" content="FanWarsIndia is under maintenance. Please wait for further notice." />
+<meta name="robots" content="noindex, nofollow" />
+<meta name="theme-color" content="#050505" />
+<link rel="icon" href="/assets/logo/crown-mark.png" type="image/png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600&family=Oswald:wght@500;600&display=swap" rel="stylesheet" />
+<style>
+  :root { --black: #050505; --white: #ffffff; --red: #ff1a1a; --deepred: #b00000; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    background: var(--black);
+    color: var(--white);
+    font-family: "Barlow", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    position: relative;
+    overflow-x: hidden;
+  }
+  .bg { position: fixed; inset: 0; z-index: 0; }
+  .bg img { width: 100%; height: 100%; object-fit: cover; object-position: center 40%; display: block; }
+  /* Dark scrim so the text stays readable, fading to the page black at the bottom */
+  .scrim {
+    position: fixed; inset: 0; z-index: 1; pointer-events: none;
+    background: linear-gradient(to bottom, rgba(5,5,5,0.72) 0%, rgba(5,5,5,0.62) 40%, rgba(5,5,5,0.78) 75%, rgba(5,5,5,0.96) 100%);
+  }
+  .glow {
+    position: fixed; inset: 0; z-index: 2; pointer-events: none;
+    background:
+      radial-gradient(ellipse 60% 45% at 50% 0%, rgba(255,26,26,0.22), transparent 60%),
+      radial-gradient(ellipse 80% 60% at 50% 100%, rgba(176,0,0,0.20), transparent 70%);
+  }
+  .grain {
+    position: fixed; inset: 0; z-index: 3; pointer-events: none; opacity: 0.06; mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+    background-size: 220px 220px;
+  }
+  main {
+    position: relative; z-index: 4;
+    min-height: 100%;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center;
+    padding: 40px 24px;
+  }
+  .logo { width: min(280px, 62vw); height: auto; filter: drop-shadow(0 6px 24px rgba(0,0,0,0.85)); margin-bottom: 36px; }
+  .code {
+    font-family: "Anton", "Arial Black", sans-serif;
+    font-size: clamp(96px, 26vw, 190px);
+    line-height: 0.95;
+    color: var(--red);
+    letter-spacing: 0.02em;
+    text-shadow: 0 0 40px rgba(255,26,26,0.45), 0 4px 20px rgba(0,0,0,0.8);
+  }
+  .bar {
+    width: 120px; height: 6px; margin: 18px auto 22px;
+    background: linear-gradient(90deg, var(--deepred), var(--red) 60%, var(--red));
+    clip-path: polygon(0% 30%, 8% 0%, 22% 40%, 38% 10%, 55% 45%, 70% 5%, 86% 35%, 100% 15%, 100% 85%, 88% 100%, 70% 65%, 52% 95%, 34% 60%, 18% 90%, 4% 55%, 0% 100%);
+  }
+  h1 {
+    font-family: "Anton", "Arial Black", sans-serif;
+    font-weight: 400;
+    text-transform: uppercase;
+    font-size: clamp(30px, 7.5vw, 56px);
+    line-height: 1.05;
+    letter-spacing: 0.015em;
+    text-shadow: 0 3px 18px rgba(0,0,0,0.85);
+  }
+  .note {
+    margin-top: 18px;
+    max-width: 30em;
+    font-size: clamp(16px, 2.4vw, 19px);
+    line-height: 1.55;
+    color: rgba(255,255,255,0.82);
+    text-shadow: 0 2px 12px rgba(0,0,0,0.8);
+  }
+  .tag {
+    margin-top: 40px;
+    font-family: "Oswald", sans-serif;
+    font-weight: 500;
+    font-size: 13px;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.55);
+  }
+  .tag b { color: var(--red); font-weight: 500; }
+</style>
+</head>
+<body>
+  <div class="bg">
+    <picture>
+      <source media="(max-width: 767px)" srcset="/assets/hero/hero-mobile.jpg" />
+      <img src="/assets/hero/hero-desktop.jpg" alt="" />
+    </picture>
+  </div>
+  <div class="scrim"></div>
+  <div class="glow"></div>
+  <div class="grain"></div>
+
+  <main>
+    <img class="logo" src="/assets/logo/fanwarsindia-logo.png" alt="FanWarsIndia — Your Star. Your Pride. Your War." />
+    <p class="code">504</p>
+    <div class="bar" aria-hidden="true"></div>
+    <h1>Website under maintenance</h1>
+    <p class="note">We're sorting out a few things behind the scenes. Please wait for further notice.</p>
+  </main>
+</body>
+</html>

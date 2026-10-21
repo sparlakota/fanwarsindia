@@ -2,6 +2,8 @@
 
 Read this first. For the "why" behind non-obvious choices, see [decisions.md](decisions.md). For what's done vs. outstanding, see [progress.md](progress.md).
 
+> **MAINTENANCE MODE IS ON (since 2026-10-22, owner request).** `vercel.json` currently serves ONLY `maintenance-site/` (a branded "Error 504 — website under maintenance" page) and answers every address with HTTP 504; the real site files in this repo are untouched but not published. **To bring the real site back:** overwrite `vercel.json` with the contents of `vercel.live.json`, commit, push `master`, and in Vercel make sure the project is not paused (Settings → General → Resume Service). The Supabase backend (payments, webhook, leaderboard data) kept running the whole time.
+
 ## What this is
 
 A Telugu-cinema fandom leaderboard site. Fans "support" their favorite actor with a rupee amount; it moves two leaderboards (Fan Power = cumulative ₹, Fan Army = unique supporter count). Brand: "pure cult, pure mass, pure fan" — raw, cinematic, tribal, explicitly **not** SaaS/corporate/casino/AI-generic. Colors: near-black `#050505`, white, fire red `#FF1A1A`, deep red `#B00000`.

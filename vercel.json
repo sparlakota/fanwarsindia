@@ -1,14 +1,29 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "headers": [
+  "outputDirectory": "maintenance-site",
+  "routes": [
     {
-      "source": "/(.*)",
-      "headers": [
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "X-Frame-Options", "value": "DENY" },
-        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
-        { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=()" }
-      ]
+      "src": "/(.*)",
+      "headers": {
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "Referrer-Policy": "strict-origin-when-cross-origin",
+        "Permissions-Policy": "camera=(), microphone=(), geolocation=()"
+      },
+      "continue": true
+    },
+    {
+      "src": "^/(?:index.html)?$",
+      "status": 504,
+      "headers": { "Cache-Control": "no-store", "Retry-After": "3600" },
+      "dest": "/index.html"
+    },
+    { "handle": "filesystem" },
+    {
+      "src": "/(.*)",
+      "status": 504,
+      "headers": { "Cache-Control": "no-store", "Retry-After": "3600" },
+      "dest": "/index.html"
     }
   ]
 }
