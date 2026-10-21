@@ -131,7 +131,7 @@ The old browser-only store (localStorage key `fanwarsindia_demo_state_v1`) is go
 
 ## Hard constraints — do not violate without asking the user first
 
-0. **The owner's personal name must not appear anywhere on the website** (owner decision 2026-10-18). Use the business name "FanWarsIndia (sole proprietorship)", the Gurugram address and support@fanwarsindia.com. The Grievance Officer blocks use "Office: Grievance Officer, FanWarsIndia" instead of a person's name. Check with `grep -rIil` for the name across served files before every deploy.
+0. **The owner's personal name must not appear anywhere on the website** (owner decision 2026-10-18). Use the business name "FanWarsIndia (sole proprietorship)" and support@fanwarsindia.com. **The street address must not appear either** (owner decision 2026-10-22; removed from Contact and Privacy; only "Gurugram, Haryana" as the city in Terms/Privacy remains). The Grievance Officer blocks use "Office: Grievance Officer, FanWarsIndia" instead of a person's name. Check with `grep -rIil` for the name and address across served files before every deploy.
 1. **No real actor photos may be sourced by Claude from the web.** Copyright + Indian personality/publicity-rights exposure (live litigation precedent: Anil Kapoor, Amitabh Bachchan, Jackie Shroff). The current 20 photos were supplied by the user directly (see decisions.md) — only add/replace actor images when the user hands you a local file path.
 2. **No AI-generated actor images either** — user explicitly declined this route too.
 3. Don't expose the local dev server beyond `127.0.0.1` without re-confirming the network safety context with the user (see decisions.md — school wifi consideration).
