@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>FanWarsIndia — Under Maintenance</title>
-<meta name="description" content="FanWarsIndia is under maintenance. Please wait for further notice." />
+<title>FanWarsIndia — A note from us</title>
+<meta name="description" content="A note from FanWarsIndia: payments have been taken down and all payments are being refunded." />
 <meta name="robots" content="noindex, nofollow" />
 <meta name="theme-color" content="#050505" />
 <link rel="icon" href="/assets/logo/crown-mark.png" type="image/png" />
@@ -57,16 +57,8 @@
     filter: drop-shadow(0 6px 24px rgba(0,0,0,0.85));
     margin-bottom: 3vh;
   }
-  .code {
-    font-family: "Anton", "Arial Black", sans-serif;
-    font-size: min(26vw, 21vh, 190px);
-    line-height: 0.95;
-    color: var(--red);
-    letter-spacing: 0.02em;
-    text-shadow: 0 0 40px rgba(255,26,26,0.45), 0 4px 20px rgba(0,0,0,0.8);
-  }
   .bar {
-    width: 120px; height: 6px; margin: 2vh auto 2.4vh;
+    width: 120px; height: 6px; margin: 1.8vh auto 0;
     background: linear-gradient(90deg, var(--deepred), var(--red) 60%, var(--red));
     clip-path: polygon(0% 30%, 8% 0%, 22% 40%, 38% 10%, 55% 45%, 70% 5%, 86% 35%, 100% 15%, 100% 85%, 88% 100%, 70% 65%, 52% 95%, 34% 60%, 18% 90%, 4% 55%, 0% 100%);
   }
@@ -74,19 +66,42 @@
     font-family: "Anton", "Arial Black", sans-serif;
     font-weight: 400;
     text-transform: uppercase;
-    font-size: min(7.5vw, 6.2vh, 56px);
-    line-height: 1.05;
+    font-size: min(11vw, 9vh, 76px);
+    line-height: 1.02;
+    color: var(--red);
+    text-shadow: 0 0 40px rgba(255,26,26,0.4), 0 3px 18px rgba(0,0,0,0.85);
     letter-spacing: 0.015em;
     text-shadow: 0 3px 18px rgba(0,0,0,0.85);
   }
-  .note {
-    margin-top: 2vh;
-    max-width: 30em;
-    font-size: min(4.2vw, 2.7vh, 19px);
+  /* The highlighted announcement */
+  .notice {
+    margin-top: 2.2vh;
+    width: min(620px, 100%);
+    padding: 2.2vh min(5vw, 28px);
+    border: 1px solid rgba(255,26,26,0.55);
+    border-radius: 10px;
+    background: rgba(5,5,5,0.62);
+    box-shadow: 0 0 0 1px rgba(255,26,26,0.12), 0 18px 50px -18px rgba(255,26,26,0.45);
+    backdrop-filter: blur(3px);
+  }
+  .notice p {
+    font-size: min(4.3vw, 2.75vh, 19px);
     line-height: 1.5;
-    color: rgba(255,255,255,0.82);
+    color: rgba(255,255,255,0.9);
+  }
+  .notice p + p { margin-top: 1.4vh; }
+  .notice strong { color: var(--white); font-weight: 600; }
+  .coming {
+    margin-top: 2.4vh;
+    font-family: "Oswald", sans-serif;
+    font-weight: 500;
+    font-size: min(4vw, 2.7vh, 17px);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.78);
     text-shadow: 0 2px 12px rgba(0,0,0,0.8);
   }
+  .coming b { color: var(--red); font-weight: 500; }
 </style>
 </head>
 <body>
@@ -102,10 +117,13 @@
 
   <main>
     <img class="logo" src="/assets/logo/fanwarsindia-logo.png" alt="FanWarsIndia — Your Star. Your Pride. Your War." />
-    <p class="code">504</p>
+    <h1>We heard you.</h1>
     <div class="bar" aria-hidden="true"></div>
-    <h1>Website under maintenance</h1>
-    <p class="note">We're sorting out a few things behind the scenes. Please wait for further notice.</p>
+    <div class="notice">
+      <p><strong>Payments have been taken down, and every payment is being refunded.</strong> It will take 5–7 days to process. Everyone who paid will get their money back.</p>
+      <p>FanWarsIndia was a fictional fan website, built for experimentation.</p>
+    </div>
+    <p class="coming">We'll be back with something <b>exciting</b> and <b>entertaining</b>.</p>
   </main>
 </body>
 </html>

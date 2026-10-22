@@ -14,15 +14,13 @@
     },
     {
       "src": "^/(?:index.html)?$",
-      "status": 504,
-      "headers": { "Cache-Control": "no-store", "Retry-After": "3600" },
+      "headers": { "Cache-Control": "no-store" },
       "dest": "/index.html"
     },
     { "handle": "filesystem" },
     {
       "src": "/(.*)",
-      "status": 504,
-      "headers": { "Cache-Control": "no-store", "Retry-After": "3600" },
+      "headers": { "Cache-Control": "no-store" },
       "dest": "/index.html"
     }
   ]
